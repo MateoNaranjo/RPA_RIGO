@@ -7,11 +7,11 @@ from HU.HU03_OCSinFactura import HU03_DiagnosticoCierre
 
 
 if __name__ == "__main__":
-    """pruebaExcel=HU07_ClasificarOC()
-    pruebaExcel.ejecutar()"""
+    pruebaExcel=HU07_ClasificarOC()
+    pruebaExcel.ejecutar()
 
-    ejecucionHu04=HU04_Auditoria()
-    ejecucionHu04.ejecutar()
+    #  ejecucionHu04=HU04_Auditoria()
+    #  ejecucionHu04.ejecutar()
 
     # ejecucionHu02=HU02_VerificacionDiaria()
     # ejecucionHu02.ejecutar()

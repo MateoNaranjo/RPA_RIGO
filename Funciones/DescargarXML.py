@@ -110,6 +110,25 @@ def realizar_consulta(driver, fecha_inicio, fecha_fin, nro_documento):
         driver.execute_script(script_fechas, fecha_inicio, fecha_fin)
         print(f"Fechas establecidas: {fecha_inicio} - {fecha_fin}")
 
+        # seleccionar tipo de busqueda
+                # 4. Llenar por OC
+        
+        criterio_xpath = "//input[@id='ddlCriterioBusqueda']/preceding-sibling::span"
+        criterio_dropdown = wait.until(EC.element_to_be_clickable((By.XPATH, criterio_xpath)))
+        criterio_dropdown.click()
+        print("Dropdown 'Criterio de Búsqueda' abierto")
+
+        # Ahora buscamos la opción "Nro Orden de Compra" en la lista desplegable
+        opcion_orden = wait.until(EC.element_to_be_clickable((By.XPATH, "//li[text()='Nro Orden de Compra']")))
+        opcion_orden.click()
+        print("Criterio cambiado a: Nro Orden de Compra")
+
+        # Setea valor de la OC en el campo de "Nro de Busqueda"
+        nro_input = driver.find_element(By.ID, "tbNumeroDocumento")
+        nro_input.clear()
+        nro_input.send_keys(nro_documento)
+        print(f"Número de documento ingresado: {nro_documento}")
+
         # 4. Llenar Nro de Búsqueda
         nro_input = driver.find_element(By.ID, "tbNumeroDocumento")
         nro_input.clear()
@@ -141,5 +160,3 @@ def descargar_xml_final(driver):
         
     except Exception as e:
         print(f"Error al descargar: {e}")
-
-

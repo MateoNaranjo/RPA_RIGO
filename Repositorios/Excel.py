@@ -147,7 +147,7 @@ class Excel:
         query = f"""
         SELECT TOP 10 *
         FROM PagoArriendos.{tabla}
-        WHERE Estado = 'Pendiente'
+        WHERE EstadoRegistro = 'Pendiente'
         """
 
         try:

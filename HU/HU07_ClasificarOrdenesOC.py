@@ -26,7 +26,7 @@ class HU07_ClasificarOC:
             in_config('SAP_SISTEMA')
         )
         self.sesion = None
-        self.nombreTabla = "BaseMedicamentos"
+        self.nombreTabla = "BaseMedicamentosLimpio"
 
     def ejecutar(self):
         # Esta lista almacenará los diccionarios de cada fila para el reporte final
@@ -45,21 +45,24 @@ class HU07_ClasificarOC:
 
             print("\n>>> INICIANDO PROCESAMIENTO DE ÓRDENES...")
             contador = 0
-            for registro in registros:
-                oc_raw = str(registro.get('Orden2025', ''))
-                proveedor = registro.get('Proveedor', 'Sin Proveedor')
-                cod_fin = registro.get('CodFin', 'N/A')
-                contador =+1
-                # Limpieza de OC con Regex
-                match = re.search(r'400\d{7}', oc_raw)
-                if not match:
-                    base_datos_reporte.append({
-                        "OC": oc_raw, "Proveedor": proveedor, "Monto": 0,
-                        "Estado SAP": "Formato Incorrecto", "Anexo GOS": "N/A"
-                    })
-                    continue
+            try:
+                for registro in registros:
+                    oc_raw = str(registro.get('orden_2025', ''))
+                    proveedor = registro.get('nombre_facturador', 'Sin Proveedor')
+                    cod_fin = registro.get('cod_fin', 'N/A')
+                    contador =+1
+                    # Limpieza de OC con Regex
+                    match = re.search(r'400\d{7}', oc_raw)
+                    if not match:
+                        base_datos_reporte.append({
+                            "OC": oc_raw, "nombre_facturador": proveedor, "Monto": 0,
+                            "Estado SAP": "Formato Incorrecto", "Anexo GOS": "N/A"
+                        })
+                        continue
 
-                oc_numero = match.group(0)
+                    oc_numero = match.group(0)
+            except Exception as e:
+                print(e)
                     
                 # 3. Consultar OC y Monto en SAP (FASE 1)
                 resultado = consultarOC(self.sesion, oc_numero)
