@@ -15,7 +15,6 @@ import subprocess
 import time
 import os
 from funciones.EscribirLog import WriteLog 
-from config.settings import RUTAS
 import pyautogui
 from pyautogui import ImageNotFoundException
 from funciones.Login import ObtenerSesionActiva

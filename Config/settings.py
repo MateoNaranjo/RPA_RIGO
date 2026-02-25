@@ -3,7 +3,7 @@
 import os
 from dotenv import load_dotenv
 from pathlib import Path
-#from config.initconfig import in_config
+from config.init_config import in_config
 
 # Cargar .env
 load_dotenv()
@@ -55,33 +55,33 @@ CONFIG_EMAIL = {
 }
 
 # ========= RUTAS =========
-RUTAS = {
-    "PathLog": get_env_variable("PATHLOG"),
-    "PathLogError": get_env_variable("PATHLOGERROR"),
-    "PathResultados": get_env_variable("PATHRESULTADOS"),
-    "PathReportes": get_env_variable("PATHREPORTES"),
-    "PathInsumo": get_env_variable("PATHINSUMO"),
-    "PathTexto": get_env_variable("PATHTEXTO_SAP"),
-    "PathRuta": get_env_variable("PATHRUTA_SAP"),
-    "PathTempFileServer": get_env_variable("SAP_TEMP_PATH"),
-    # Archivo de configuración de correos
-    "ArchivoCorreos": os.path.join(BASE_DIR, "Insumo", "EnvioCorreos.xlsx"),
-    # Rutas de archivos
-    "PathInsumos": os.path.join(BASE_DIR, "Insumo"),
-    "PathSalida": os.path.join(BASE_DIR, "Salida"),
-    "PathTemp": os.path.join(BASE_DIR, "Temp"),
-    "PathResultado": os.path.join(BASE_DIR, "Resultado"),
-}
+# RUTAS = {
+#     "PathLog": get_env_variable("PATHLOG"),
+#     "PathLogError": get_env_variable("PATHLOGERROR"),
+#     "PathResultados": get_env_variable("PATHRESULTADOS"),
+#     "PathReportes": get_env_variable("PATHREPORTES"),
+#     "PathInsumo": get_env_variable("PATHINSUMO"),
+#     "PathTexto": get_env_variable("PATHTEXTO_SAP"),
+#     "PathRuta": get_env_variable("PATHRUTA_SAP"),
+#     "PathTempFileServer": get_env_variable("SAP_TEMP_PATH"),
+#     # Archivo de configuración de correos
+#     "ArchivoCorreos": os.path.join(BASE_DIR, "Insumo", "EnvioCorreos.xlsx"),
+#     # Rutas de archivos
+#     "PathInsumos": os.path.join(BASE_DIR, "Insumo"),
+#     "PathSalida": os.path.join(BASE_DIR, "Salida"),
+#     "PathTemp": os.path.join(BASE_DIR, "Temp"),
+#     "PathResultado": os.path.join(BASE_DIR, "Resultado"),
+# }
 
 # Crear carpetas si no existen
-for key, path in RUTAS.items():
-    if key.startswith("Path") and key not in [
-        "PathLog",
-        "PathLogError",
-        "ArchivoCorreos",
-    ]:
-        os.makedirs(path, exist_ok=True)
+# for key, path in RUTAS.items():
+#     if key.startswith("Path") and key not in [
+#         "PathLog",
+#         "PathLogError",
+#         "ArchivoCorreos",
+#     ]:
+#         os.makedirs(path, exist_ok=True)
 
 # Crear carpeta de logs
-os.makedirs(os.path.dirname(RUTAS["PathLog"]), exist_ok=True)
+os.makedirs(os.path.dirname(in_config("PathLogs")), exist_ok=True)
 

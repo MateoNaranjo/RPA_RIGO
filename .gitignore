@@ -47,3 +47,4 @@ desktop.ini
 # Evitar subida de archivos grandes o sensibles
 *.zip
 *.rar
+.env

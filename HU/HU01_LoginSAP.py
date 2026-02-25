@@ -4,7 +4,7 @@ import getpass
 import subprocess
 import os
 from config.init_config import in_config
-from config.settings import RUTAS, SAP_CONFIG 
+
 from funciones.ValidacionM21N import ventana_abierta
 
 import pyautogui

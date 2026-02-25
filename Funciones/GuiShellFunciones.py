@@ -15,11 +15,11 @@ import subprocess
 import time
 import os
 from funciones.EscribirLog import WriteLog
-from config.settings import RUTAS
 import pyautogui
 from pyautogui import ImageNotFoundException
 from funciones.Login import ObtenerSesionActiva
 from typing import List, Literal, Optional
+from config.init_config import in_config
 
 from datetime import datetime, timedelta
 import calendar
@@ -659,9 +659,7 @@ def buscar_y_clickear(
                     WriteLog(
                         mensaje=f"Imagen encontrada y clickeada: {ruta_imagen}",
                         estado="INFO",
-                        task_name=task_name,
-                        path_log=RUTAS["PathLog"],
-                    )
+                        task_name=task_name,)
                     #print(f"[INFO] Imagen encontrada y clickeada: {ruta_imagen}")
                 return True
 
@@ -675,9 +673,7 @@ def buscar_y_clickear(
                  WriteLog(
                         mensaje=f"Error inesperado buscando imagen {ruta_imagen}: {e}",
                         estado="ERROR",
-                        task_name=task_name,
-                        path_log=RUTAS["PathLog"],
-                    )
+                        task_name=task_name,)
                  #print(f"[ERROR] Error inesperado buscando imagen {ruta_imagen}: {e}")
             if not fail_silently:
                 raise
@@ -688,9 +684,7 @@ def buscar_y_clickear(
         WriteLog(
             mensaje=f"Imagen no encontrada tras {intento} intentos: {ruta_imagen}",
             estado="WARNING",
-            task_name=task_name,
-            path_log=RUTAS["PathLog"],
-        )
+            task_name=task_name,)
         #print(f"[WARNING] Imagen no encontrada tras {intento} intentos: {ruta_imagen}")
 
     if not fail_silently:
@@ -992,12 +986,10 @@ def ProcesarTabla(name, dias=None):
         WriteLog(
             mensaje=f"Procesar archivo nombre {name}",
             estado="INFO",
-            task_name="procesarTablaME5A",
-            path_log=RUTAS["PathLog"],
-        )
-
+            task_name="procesarTablaME5A",)
+  
         # path = f".\\AutomatizacionGestionSolped\\Insumo\\{name}"
-        path = rf"{RUTAS["PathInsumos"]}\{name}"
+        path = rf"{in_config('PathInsumos')}\{name}"
 
         # INTENTAR LEER CON DIFERENTES CODIFICACIONES
         lineas = []
@@ -1213,9 +1205,7 @@ def ProcesarTabla(name, dias=None):
         WriteLog(
             mensaje=f"Error en procesarTablaME5A: {e}",
             estado="ERROR",
-            task_name="procesarTablaME5A",
-            path_log=RUTAS["PathLogError"],
-        )
+            task_name="procesarTablaME5A",)
         print(f"ERROR en procesarTablaME5A: {e}")
         traceback.print_exc()
         return pd.DataFrame()
@@ -1223,7 +1213,7 @@ def ProcesarTabla(name, dias=None):
 def ProcesarTablaMejorada(name, dias=None):
     try:
         # 1. Carga de archivo con manejo de rutas
-        path = rf"{RUTAS['PathTempFileServer']}\{name}"
+        path = rf"{in_config('PathTemp')}\{name}"
         lineas_puras = []
         for cod in ["latin-1", "utf-8", "cp1252"]:
             try:
@@ -1464,19 +1454,15 @@ def AbrirTransaccion(session, transaccion):
         WriteLog(
             mensaje=f"Abrir Transaccion {transaccion}",
             estado="INFO",
-            task_name="AbrirTransaccion",
-            path_log=RUTAS["PathLog"],
-        )
-
+            task_name="AbrirTransaccion",)
+        
         # Validar sesion SAP
         if session is None:
 
             WriteLog(
                 mensaje="Sesion SAP no disponible",
                 estado="ERROR",
-                task_name="AbrirTransaccion",
-                path_log=RUTAS["PathLog"],
-            )
+                task_name="AbrirTransaccion",)
             raise Exception("Sesion SAP no disponible")
 
         # Abrir transaccion dinamica
@@ -1488,7 +1474,7 @@ def AbrirTransaccion(session, transaccion):
             mensaje=f"Transaccion {transaccion} abierta",
             estado="INFO",
             task_name="AbrirTransaccion",
-            path_log=RUTAS["PathLog"],
+            
         )
         print(f"Transaccion {transaccion} abierta")
         return True
@@ -1497,7 +1483,6 @@ def AbrirTransaccion(session, transaccion):
             mensaje=f"Error en AbrirTransaccion: {e}",
             estado="ERROR",
             task_name="AbrirTransaccion",
-            path_log=RUTAS["PathLogError"],
         )
 
         return False
