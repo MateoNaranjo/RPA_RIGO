@@ -36,7 +36,6 @@ class Reutilizables:
         logging.basicConfig(
             level=logging.INFO,
             # FECHA HORA | ESTADO | MENSAJE | CODIGOROBOT | TASKNAME   
-            #2026-01-05 10:49:59 | INFO     | _configurar_logger   | Sistema de logging inicializado
             format=rf'%(asctime)s | %(levelname)-2s | %(message)-10s | {robbot} | %(funcName)-20s ',
             #format='%(asctime)s | %(levelname)-8s | %(message)s | RIGO | %(funcName)-20s ',
             datefmt='%Y-%m-%d %H:%M:%S',
@@ -153,7 +152,7 @@ ambiente = Reutilizables(
     in_config("PathLog"),
     in_config("PathTemp"),
     in_config("PathInsumo"),
-    in_config("PathResultados")
+    in_config("PathResultado")
 )
 
 ambiente.crear_carpetas()

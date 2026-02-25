@@ -643,7 +643,7 @@ def buscar_y_clickear(
     Returns:
         bool: True si se encontró e hizo click, False si no.
     """
-    task_name = "HU4_GeneracionOC"
+    nombreTarea = "HU4_GeneracionOC"
 
     for intento in range(1, intentos + 1):
         try:
@@ -659,7 +659,7 @@ def buscar_y_clickear(
                     WriteLog(
                         mensaje=f"Imagen encontrada y clickeada: {ruta_imagen}",
                         estado="INFO",
-                        task_name=task_name,)
+                        nombreTarea=nombreTarea,)
                     #print(f"[INFO] Imagen encontrada y clickeada: {ruta_imagen}")
                 return True
 
@@ -673,7 +673,7 @@ def buscar_y_clickear(
                  WriteLog(
                         mensaje=f"Error inesperado buscando imagen {ruta_imagen}: {e}",
                         estado="ERROR",
-                        task_name=task_name,)
+                        nombreTarea=nombreTarea,)
                  #print(f"[ERROR] Error inesperado buscando imagen {ruta_imagen}: {e}")
             if not fail_silently:
                 raise
@@ -684,7 +684,7 @@ def buscar_y_clickear(
         WriteLog(
             mensaje=f"Imagen no encontrada tras {intento} intentos: {ruta_imagen}",
             estado="WARNING",
-            task_name=task_name,)
+            nombreTarea=nombreTarea,)
         #print(f"[WARNING] Imagen no encontrada tras {intento} intentos: {ruta_imagen}")
 
     if not fail_silently:
@@ -986,7 +986,7 @@ def ProcesarTabla(name, dias=None):
         WriteLog(
             mensaje=f"Procesar archivo nombre {name}",
             estado="INFO",
-            task_name="procesarTablaME5A",)
+            nombreTarea="procesarTablaME5A",)
   
         # path = f".\\AutomatizacionGestionSolped\\Insumo\\{name}"
         path = rf"{in_config('PathInsumos')}\{name}"
@@ -1205,7 +1205,7 @@ def ProcesarTabla(name, dias=None):
         WriteLog(
             mensaje=f"Error en procesarTablaME5A: {e}",
             estado="ERROR",
-            task_name="procesarTablaME5A",)
+            nombreTarea="procesarTablaME5A",)
         print(f"ERROR en procesarTablaME5A: {e}")
         traceback.print_exc()
         return pd.DataFrame()
@@ -1450,11 +1450,15 @@ def AbrirTransaccion(session, transaccion):
     transaccion: transaccion a buscar
     Realiza la busqueda de la transaccion requerida"""
 
+    # TODO : Revisar log con Clases 
+    logger = logging.getLogger(__name__)
+    logger.info(f"Abrir Transaccion {transaccion}")
+
     try:
-        WriteLog(
-            mensaje=f"Abrir Transaccion {transaccion}",
-            estado="INFO",
-            task_name="AbrirTransaccion",)
+        # WriteLog(
+        #     mensaje=f"Abrir Transaccion {transaccion}",
+        #     estado="INFO",
+        #     nombreTarea="AbrirTransaccion",)
         
         # Validar sesion SAP
         if session is None:
@@ -1462,7 +1466,7 @@ def AbrirTransaccion(session, transaccion):
             WriteLog(
                 mensaje="Sesion SAP no disponible",
                 estado="ERROR",
-                task_name="AbrirTransaccion",)
+                nombreTarea="AbrirTransaccion",)
             raise Exception("Sesion SAP no disponible")
 
         # Abrir transaccion dinamica
@@ -1473,7 +1477,7 @@ def AbrirTransaccion(session, transaccion):
         WriteLog(
             mensaje=f"Transaccion {transaccion} abierta",
             estado="INFO",
-            task_name="AbrirTransaccion",
+            nombreTarea="AbrirTransaccion",
             
         )
         print(f"Transaccion {transaccion} abierta")
@@ -1482,7 +1486,7 @@ def AbrirTransaccion(session, transaccion):
         WriteLog(
             mensaje=f"Error en AbrirTransaccion: {e}",
             estado="ERROR",
-            task_name="AbrirTransaccion",
+            nombreTarea="AbrirTransaccion",
         )
 
         return False
