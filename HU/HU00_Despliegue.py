@@ -150,9 +150,9 @@ Reutilizables.cargar_configuracion()
 ambiente = Reutilizables(
     in_config("PathProyecto"),
     in_config("PathAudit"),
-    in_config("PathLogs"),
+    in_config("PathLog"),
     in_config("PathTemp"),
-    in_config("PathInsumos"),
+    in_config("PathInsumo"),
     in_config("PathResultados")
 )
 
