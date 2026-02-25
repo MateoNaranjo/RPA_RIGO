@@ -13,10 +13,10 @@ class HU02_VerificacionDiaria:
         self.sap = ConexionSAP(
             SAP_CONFIG.get('SAP_USUARIO'),
             SAP_CONFIG.get('SAP_PASSWORD'),
-            in_config('SAP_CLIENTE'),
-            in_config('SAP_IDIOMA'),
-            in_config('SAP_PATH'),
-            in_config('SAP_SISTEMA')
+            in_config('SapMandante'),
+            in_config('SapIdioma'),
+            in_config('SapRutaLogon'),
+            in_config('SapSistema')
         )
         self.ruta_input = r"\\192.168.50.169\RPA_RIGO_GestionPagodeArrendamientos\Resultados"
         self.ruta_output = r"\\192.168.50.169\RPA_RIGO_GestionPagodeArrendamientos\Resultados\Reportes_HU02"

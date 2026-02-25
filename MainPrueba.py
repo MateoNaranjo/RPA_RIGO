@@ -19,13 +19,13 @@ def main():
     sap = ConexionSAP(
                 SAP_CONFIG.get('user'),
                 SAP_CONFIG.get('password'),
-                in_config('SAP_CLIENTE'),
-                in_config('SAP_IDIOMA'),
-                in_config('SAP_PATH'),
-                in_config('SAP_SISTEMA')
+                in_config('SapMandante'),
+                in_config('SapIdioma'),
+                in_config('SapRutaLogon'),
+                in_config('SapSistema')
             )
     sap.iniciar_sesion_sap()
-    #session = conectar_sap(in_config("SAP_SISTEMA"),in_config("SAP_MANDANTE") ,SAP_CONFIG["user"],SAP_CONFIG["password"],)
+    #session = conectar_sap(in_config("SapSistema"),in_config("SAP_MANDANTE") ,SAP_CONFIG["user"],SAP_CONFIG["password"],)
     
     #print(session)
     session = ObtenerSesionActiva()

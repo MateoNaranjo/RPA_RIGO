@@ -25,7 +25,7 @@ def get_env_variable(key: str, required: bool = True):
 PROCESO_CONFIG = {
     'DIAS_ESPERA_LIBERACION': 2,
     'HORA_LIMITE_ENVIO': '11:45',
-    'MAX_REINTENTOS_SAP': 3,
+    'ReIntentos': 3,
     'TIMEOUT_SAP': 30
 }
 

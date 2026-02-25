@@ -43,7 +43,7 @@ class ConexionSAP:
         if not self.abrir_SAP():
             return None
         
-        max_intentos = PROCESO_CONFIG['MAX_REINTENTOS_SAP']
+        max_intentos = PROCESO_CONFIG['ReIntentos']
         
         for intento in range(1, max_intentos + 1):
             try:
@@ -166,10 +166,10 @@ class ConexionSAP:
 
 '''ejecutarMain=PagoArriendos(SAP_CONFIG.get('SAP_USUARIO'),
                             SAP_CONFIG.get('SAP_PASSWORD'),
-                            SAP_CONFIG.get('SAP_CLIENTE'),
-                            SAP_CONFIG.get('SAP_IDIOMA'),
-                            SAP_CONFIG.get('SAP_PATH'),
-                            SAP_CONFIG.get('SAP_SISTEMA')
+                            SAP_CONFIG.get('SapMandante'),
+                            SAP_CONFIG.get('SapIdioma'),
+                            SAP_CONFIG.get('SapRutaLogon'),
+                            SAP_CONFIG.get('SapSistema')
                             )
 ejecutarMain.abrir_SAP()
 ejecutarMain.ingresar_SAP(ejecutarMain.conectar_SAP())'''
