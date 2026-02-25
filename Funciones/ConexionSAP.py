@@ -2,7 +2,7 @@ import win32com.client
 import time
 import subprocess
 from pathlib import Path
-from Config.Senttings import SAP_CONFIG, PROCESO_CONFIG
+from config.settings import SAP_CONFIG, PROCESO_CONFIG
 from HU.HU00_Despliegue import ambiente
 
 class ConexionSAP:
@@ -88,6 +88,7 @@ class ConexionSAP:
     def ingresar_SAP(self, sesion):
         """Realiza login en SAP"""
         try:
+            
             self.logger.info("Iniciando proceso de login")
             sesion.findById("wnd[0]").maximize()
             sesion.findById("wnd[0]/usr/txtRSYST-BNAME").text = self.usuario
@@ -115,6 +116,7 @@ class ConexionSAP:
     def iniciar_sesion_sap(self):
         """Proceso completo de iniciar sesión"""
         try:
+            
             sesion = self.conectar_SAP()
             if not sesion:
                 raise Exception("No se pudo crear la sesión SAP")

@@ -3,10 +3,10 @@ import glob
 import os
 import time
 from datetime import datetime
-from Funciones.ConexionSAP import ConexionSAP
-from Funciones.DatosHU04 import consultar_datos_hu04 # Reutilizamos la conexión
-from Config.Senttings import SAP_CONFIG
-from Config.init_config import in_config
+from funciones.ConexionSAP import ConexionSAP
+from funciones.DatosHU04 import consultar_datos_hu04 # Reutilizamos la conexión
+from config.settings import SAP_CONFIG
+from config.init_config import in_config
 
 class HU02_VerificacionDiaria:
     def __init__(self):

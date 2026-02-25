@@ -1,13 +1,20 @@
-from Repositorios.Excel import Excel
+from repositorios.Excel import Excel
 from HU.HU07_ClasificarOrdenesOC import HU07_ClasificarOC
+from HU.HU08_EstrategiasDeLiberacion import HU08_EstrategiasDeLiberacion
+from HU.HU00_Despliegue import Reutilizables
+
 from HU.HU04_NotificarOCSinFacturar import HU04_Auditoria
 from HU.HU02_ValidacionFAC import HU02_VerificacionDiaria
 from HU.HU05_GestionAnexos import HU05_CargueSQL
 from HU.HU03_OCSinFactura import HU03_DiagnosticoCierre
 
 if __name__ == "__main__":
-    pruebaExcel=HU07_ClasificarOC()
+
+   
+
+    pruebaExcel=HU08_EstrategiasDeLiberacion()
     pruebaExcel.ejecutar()
+   
 
     """ejecucionHu04=HU04_Auditoria()
     ejecucionHu04.ejecutar()"""

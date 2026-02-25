@@ -1,7 +1,8 @@
 import logging
 from pathlib import Path
 from datetime import datetime
-from Config.init_config import init_config, in_config
+import traceback
+from config.init_config import init_config, in_config
 
 class Reutilizables:
     """Clase para manejo de ambiente y logging del proyecto"""
@@ -136,3 +137,106 @@ ambiente = Reutilizables(
 )
 
 ambiente.crear_carpetas()
+
+
+
+
+# ================================
+# GestionSOLPED – HU00: DespliegueAmbiente
+# Autor: Paula Sierra - NetApplications
+# Descripcion: Carga parámetros, valida carpetas y prepara entorno
+# Ultima modificacion: 30/11/2025
+# Propiedad de Colsubsidio
+# Cambios: Ajuste ruta base dinámica + estándar Colsubsidio
+# ================================
+
+import os
+import json
+
+from config.init_config import init_config, in_config
+from funciones.FuncionesExcel import ExcelService
+
+import os
+#from funciones.FuncionesExcel import ExcelService
+#from repositorios.Excel import Excel as ServicioExcel
+from config.init_config import in_config as inConfig
+
+
+
+#from config.initconfig import init_config
+
+# Inicializar ambiente al importar
+ambiente = Reutilizables(
+    in_config("PathProyecto"),
+    in_config("PathAudit"),
+    in_config("PathLogs"),
+    in_config("PathTemp"),
+    in_config("PathInsumos"),
+    in_config("PathResultados")
+)
+
+
+def EjecutarHU00():
+    """
+    Prepara el entorno: valida carpetas, carga parámetros y estructura inicial.
+    """
+
+    # ==========================================================
+    # 1. Ruta base del proyecto (importante)
+    # ==========================================================
+    ruta_base = os.path.dirname(os.path.abspath(__file__))  # ruta de HU00
+    ruta_base = os.path.abspath(os.path.join(ruta_base, ".."))
+    # Sube un nivel para quedar en /AutomatizacionGestionSolped
+
+    # ==========================================================
+    # 2. Definir las carpetas obligatorias según estándar
+    # ==========================================================
+    carpetas = [
+        "Audit/Logs",
+        "Audit/Screenshots",
+        "Temp",
+        "Insumo",
+        "Resultado",
+        "Funciones",
+        "HU",
+    ]
+
+    for carpeta in carpetas:
+        ruta_completa = os.path.join(ruta_base, carpeta)
+
+        if not os.path.exists(ruta_completa):
+            os.makedirs(ruta_completa)
+
+    # ==========================================================
+    # 3. Cargar parámetros desde o BD
+    # ==========================================================
+    init_config()
+ 
+    # ==========================================================
+    # 4. Cargar Ecxel con hojas que van a ser las tablas de parametros en la BD
+    # ==========================================================
+
+    try : 
+            #TODO: hacer el bulk por hoja a tabla en base de datos     
+            #TicketInsumoRepo.crearPCTicketInsumo( estado=0, observaciones= "Cargue de insumo")
+            rutaParametros = os.path.join(inConfig("PathTemp"),"EnvioCorreos.xlsx")
+            ExcelService.ejecutarBulkDesdeExcel(rutaParametros, sheet="ALL")
+            #TicketInsumoRepo.crearPCTicketInsumo( estado=100, observaciones= "Cargue de insumo")
+    except Exception as e: 
+            #TicketInsumoRepo.crearPCTicketInsumo( error= 99, observaciones="Carge de insumo " )
+            print("Error al cargar insumo Despliegue HU00 envio correos")
+            traceback.print_exc()
+
+   
+
+    
+
+    ruta_config = os.path.join(ruta_base, "config.json")
+
+    if os.path.exists(ruta_config):
+        with open(ruta_config, "r", encoding="utf-8") as f:
+            config = json.load(f)
+    else:
+        config = {}
+
+    return config

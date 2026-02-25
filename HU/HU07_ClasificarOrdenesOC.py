@@ -4,12 +4,12 @@ import pandas as pd
 from datetime import datetime
 import time
 import threading
-from Config.Senttings import SAP_CONFIG
-from Config.init_config import in_config
-from Funciones.ConexionSAP import ConexionSAP
-from Funciones.consultarOC import consultarOC
-from Funciones.CargarAnexo import cargar_archivo_gos # Asegúrate de que este archivo exista
-from Repositorios.Excel import Excel as ExcelDB
+from config.settings import SAP_CONFIG
+from config.init_config import in_config
+from funciones.ConexionSAP import ConexionSAP
+from funciones.consultarOC import consultarOC
+from funciones.CargarAnexo import cargar_archivo_gos # Asegúrate de que este archivo exista
+from repositorios.Excel import Excel as ExcelDB
 
 class HU07_ClasificarOC:
     def __init__(self):
@@ -26,7 +26,7 @@ class HU07_ClasificarOC:
             in_config('SAP_SISTEMA')
         )
         self.sesion = None
-        self.nombreTabla = "BaseMedicamentos"
+        self.nombreTabla = "BaseMedicamentoslimpio"
 
     def ejecutar(self):
         # Esta lista almacenará los diccionarios de cada fila para el reporte final

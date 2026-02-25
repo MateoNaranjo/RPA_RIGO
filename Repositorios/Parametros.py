@@ -1,4 +1,4 @@
-from Config.Database import Database
+from config.database import Database
 import logging
 
 logger = logging.getLogger(__name__)
