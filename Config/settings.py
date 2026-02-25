@@ -3,7 +3,7 @@
 import os
 from dotenv import load_dotenv
 from pathlib import Path
-from config.init_config import in_config
+#from config.init_config import in_config
 
 # Cargar .env
 load_dotenv()
@@ -41,8 +41,7 @@ DB_CONFIG = {
     "database": get_env_variable("NAMEDB"),
     "user": get_env_variable("USERDB"),
     "password": get_env_variable("PASSWORDDB"),
-    "schema": get_env_variable("SCHEMA"),
-    
+    "schema": get_env_variable("SCHEMA"),    
 }
 
 
@@ -83,5 +82,5 @@ CONFIG_EMAIL = {
 #         os.makedirs(path, exist_ok=True)
 
 # Crear carpeta de logs
-os.makedirs(os.path.dirname(in_config("PathLogs")), exist_ok=True)
+#os.makedirs(os.path.dirname(in_config("PathLogs")), exist_ok=True)
 

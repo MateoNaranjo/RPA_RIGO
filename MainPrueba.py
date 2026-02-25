@@ -1,14 +1,10 @@
-import datetime
 import traceback
 
 from funciones.ConexionSAP import ConexionSAP
-from funciones.LeerXML import LectorFacturaXML
-from funciones.ME2L import TransaccionME2L
-from funciones.MIGO import TransaccionMIGO
+
 from config.settings import SAP_CONFIG
 from config.init_config import in_config
-from HU.HU00_Despliegue import EjecutarHU00
-from HU.HU01_LoginSAP import conectar_sap, ObtenerSesionActiva
+from HU.HU01_LoginSAP import ObtenerSesionActiva
 import pyperclip
 
 from funciones.GuiShellFunciones import AbrirTransaccion

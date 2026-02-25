@@ -16,10 +16,10 @@ import os
 import getpass
 import socket
 import traceback
-from config.init_config import inConfig
+from config.init_config import in_config
 
  
-def WriteLog(mensaje: str = "Mensaje vacío", estado: str = "INFO", nombreTarea: str = "TaskNoDefinida", rutaRegistro = inConfig("PathLog"),):
+def WriteLog(mensaje: str = "Mensaje vacío", estado: str = "INFO", nombreTarea: str = "TaskNoDefinida", rutaRegistro = in_config("PathLog"),):
     """
     mensaje  : Texto del log
     estado   : INFO, DEBUG, WARN, ERROR
@@ -76,7 +76,7 @@ def WriteLog(mensaje: str = "Mensaje vacío", estado: str = "INFO", nombreTarea:
             f"{fecha_linea} | "
             f"{estado} | "
             f"{mensaje} | "
-            f"{inConfig('CodigoRobot')} | "
+            f"{in_config('CodigoRobot')} | "
             f"{nombreTarea} | "
             "\n"
         )
