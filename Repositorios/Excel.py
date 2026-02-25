@@ -145,9 +145,9 @@ class Excel:
     def obtener_datos_por_posicion(tabla: str):
         # Corregimos los nombres de las columnas según tu tabla real
         query = f"""
-        SELECT TOP 36 *
+        SELECT TOP 5 *
         FROM PagoArriendos.{tabla}
-        WHERE Estado = 'Pendiente'
+        WHERE EstadoRegistro = 'Pendiente'
         """
 
         try:
