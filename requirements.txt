@@ -6,3 +6,4 @@ openpyxl==3.1.5
 pywinauto==0.6.8
 pyautogui==0.9.54
 selenium ==4.27
+webdriver-manager==4.0.2

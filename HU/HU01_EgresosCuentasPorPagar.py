@@ -3,7 +3,7 @@ from datetime import datetime
 from Funciones.LeerXML import LectorFacturaXML
 from Funciones.ME2L import TransaccionME2L
 from Funciones.MIGO import TransaccionMIGO
-from Config.Senttings import SAP_CONFIG, CADENA
+from Config.Senttings import SAP_CONFIG, CADENA_CONFIG
 from Config.init_config import in_config
 from Funciones.DescargarXML import login_colsubsidio, realizar_consulta, descargar_xml_final
 
@@ -20,20 +20,16 @@ class Facturas:
         )
         self.sesion = None
 
-        self.cadenaUsuario=CADENA.get('CADENA_USUARIO')
-        self.cadenaContraseña=CADENA.get('CADENA_CONTRASEÑA')
-        self.cadenaRuta=CADENA.get('CADENA_RUTA')
+        self.cadenaUsuario=CADENA_CONFIG.get('CADENA_USUARIO')
+        self.cadenaContraseña=CADENA_CONFIG.get('CADENA_CONTRASEÑA')
+        self.cadenaRuta=CADENA_CONFIG.get('CADENA_RUTA')
 
     def descargar_XML(self):
-
-        hoy =datetime.today()
-
-        fecha_inicio=hoy.replace(day=1).strftime("%Y/%m/%d")
-        fecha_final =hoy.strftime("%Y/%m/%d")
-
         nro_documento="4001249504"
         try:
-            descargar_xml_final(realizar_consulta(login_colsubsidio(self.cadenaUsuario, self.cadenaContraseña, self.cadenaRuta), fecha_inicio, fecha_final, nro_documento))
+            sesion = login_colsubsidio(self.cadenaUsuario, self.cadenaContraseña, self.cadenaRuta)
+            realizar_consulta(sesion, oc=nro_documento)
+            descargar_xml_final(sesion)
         except Exception:
             print("error al ingresar al aplicativo cadena")
 

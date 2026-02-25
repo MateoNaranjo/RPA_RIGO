@@ -7,7 +7,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from Config.Senttings import CADENA
+from datetime import date 
 import time
 import os
 
@@ -79,7 +79,14 @@ def login_colsubsidio(usuario, contraseña, ruta):
         return driver
     
 
-def realizar_consulta(driver, fecha_inicio, fecha_fin, nro_documento):
+def realizar_consulta(driver, oc = None, nro_documento = None):
+
+    fecha_actual = date.today()
+    fecha_inicial = date(fecha_actual.year, 1, 1)
+
+    # Formato dd/mm/yyyy
+    fecha_final_str = fecha_actual.strftime("%Y/%m/%d")
+    fecha_inicial_str = fecha_inicial.strftime("%Y/%m/%d")
     wait = WebDriverWait(driver, 20)
     
     try:
@@ -107,33 +114,26 @@ def realizar_consulta(driver, fecha_inicio, fecha_fin, nro_documento):
             f_ini.value = arguments[0];
             f_fin.value = arguments[1];
         """
-        driver.execute_script(script_fechas, fecha_inicio, fecha_fin)
-        print(f"Fechas establecidas: {fecha_inicio} - {fecha_fin}")
+        driver.execute_script(script_fechas, fecha_inicial_str, fecha_final_str)
+        print(f"Fechas establecidas: {fecha_inicial_str} - {fecha_final_str}")
 
-        # seleccionar tipo de busqueda
-                # 4. Llenar por OC
-        
-        criterio_xpath = "//input[@id='ddlCriterioBusqueda']/preceding-sibling::span"
-        criterio_dropdown = wait.until(EC.element_to_be_clickable((By.XPATH, criterio_xpath)))
-        criterio_dropdown.click()
-        print("Dropdown 'Criterio de Búsqueda' abierto")
+        # 4. Llenar por OC
+        if oc:
+            criterio_xpath = "//input[@id='ddlCriterioBusqueda']/preceding-sibling::span"
+            criterio_dropdown = wait.until(EC.element_to_be_clickable((By.XPATH, criterio_xpath)))
+            criterio_dropdown.click()
+            print("Dropdown 'Criterio de Búsqueda' abierto")
 
-        # Ahora buscamos la opción "Nro Orden de Compra" en la lista desplegable
-        opcion_orden = wait.until(EC.element_to_be_clickable((By.XPATH, "//li[text()='Nro Orden de Compra']")))
-        opcion_orden.click()
-        print("Criterio cambiado a: Nro Orden de Compra")
+            # Ahora buscamos la opción "Nro Orden de Compra" en la lista desplegable
+            opcion_orden = wait.until(EC.element_to_be_clickable((By.XPATH, "//li[text()='Nro Orden de Compra']")))
+            opcion_orden.click()
+            print("Criterio cambiado a: Nro Orden de Compra")
 
-        # Setea valor de la OC en el campo de "Nro de Busqueda"
-        nro_input = driver.find_element(By.ID, "tbNumeroDocumento")
-        nro_input.clear()
-        nro_input.send_keys(nro_documento)
-        print(f"Número de documento ingresado: {nro_documento}")
-
-        # 4. Llenar Nro de Búsqueda
-        nro_input = driver.find_element(By.ID, "tbNumeroDocumento")
-        nro_input.clear()
-        nro_input.send_keys(nro_documento)
-        print(f"Número de documento ingresado: {nro_documento}")
+            # Setea valor de la OC en el campo de "Nro de Busqueda"
+            nro_input = driver.find_element(By.ID, "tbNumeroDocumento")
+            nro_input.clear()
+            nro_input.send_keys(oc)
+            print(f"Número de documento ingresado: {oc}")
 
         # 5. Click en el botón Buscar
         # Usamos el selector CSS para el botón que tiene la clase btn-success y el texto 

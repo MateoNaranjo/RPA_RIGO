@@ -9,6 +9,9 @@ from Config.Senttings import SAP_CONFIG
 from Config.init_config import in_config
 
 class HU04_Auditoria:
+    """
+    Revisa existencia de Facturas y genera un informe 
+    """
     def __init__(self):
         self.sap = ConexionSAP(
             SAP_CONFIG.get('SAP_USUARIO'),
