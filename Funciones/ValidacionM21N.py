@@ -14,11 +14,11 @@ import re
 import subprocess
 import time
 import os
-from funciones.EscribirLog import WriteLog 
+from Funciones.EscribirLog import WriteLog 
 import pyautogui
 from pyautogui import ImageNotFoundException
-from funciones.Login import ObtenerSesionActiva
-from funciones.GuiShellFunciones import (SapTextEditor,
+from Funciones.Login import ObtenerSesionActiva
+from Funciones.GuiShellFunciones import (SapTextEditor,
 set_GuiTextField_text,              
 get_GuiTextField_text,
 buscar_objeto_por_id_parcial,

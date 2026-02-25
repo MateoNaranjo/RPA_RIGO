@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 from datetime import datetime
-from config.init_config import in_config
+from Config.init_config import in_config
 
 class HU03_DiagnosticoCierre:
     def __init__(self):

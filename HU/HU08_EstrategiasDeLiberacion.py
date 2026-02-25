@@ -4,13 +4,13 @@ import pandas as pd
 from datetime import datetime
 import time
 import threading
-from config.settings import SAP_CONFIG
-from config.init_config import in_config
-from funciones.ConexionSAP import ConexionSAP
-from funciones.consultarOC import consultarOC
-from funciones.CargarAnexo import cargar_archivo_gos # Asegúrate de que este archivo exista
+from Config.settings import SAP_CONFIG
+from Config.init_config import in_config
+from Funciones.ConexionSAP import ConexionSAP
+from Funciones.consultarOC import consultarOC
+from Funciones.CargarAnexo import cargar_archivo_gos # Asegúrate de que este archivo exista
 from repositorios.Excel import Excel as ExcelDB
-from funciones.GuiShellFunciones import AbrirTransaccion,ObtenerSesionActiva
+from Funciones.GuiShellFunciones import AbrirTransaccion,ObtenerSesionActiva
 
 class  HU08_EstrategiasDeLiberacion:
     def __init__(self):

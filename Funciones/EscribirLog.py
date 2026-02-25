@@ -16,7 +16,7 @@ import os
 import getpass
 import socket
 import traceback
-from config.init_config import in_config
+from Config.init_config import in_config
 
  
 def WriteLog(mensaje: str = "Mensaje vacío", estado: str = "INFO", nombreTarea: str = "TaskNoDefinida", rutaRegistro = in_config("PathLog"),):

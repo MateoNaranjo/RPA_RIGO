@@ -3,9 +3,9 @@ import time
 import getpass
 import subprocess
 import os
-from config.init_config import in_config
+from Config.init_config import in_config
 
-from funciones.ValidacionM21N import ventana_abierta
+from Funciones.ValidacionM21N import ventana_abierta
 
 import pyautogui
 

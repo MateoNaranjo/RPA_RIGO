@@ -1,6 +1,6 @@
 import pandas as pd
 from datetime import datetime
-from config.database import Database
+from Config.database import Database
 
 class HU05_CargueSQL:
     

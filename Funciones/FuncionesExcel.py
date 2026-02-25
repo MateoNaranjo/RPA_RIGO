@@ -5,7 +5,7 @@ import unicodedata
 import warnings
 import pandas as pd
 
-from config.init_config import in_config
+from Config.init_config import in_config
 from repositorios.Excel import Excel
 
 

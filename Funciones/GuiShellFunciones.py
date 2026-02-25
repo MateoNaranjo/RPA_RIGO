@@ -14,12 +14,12 @@ import re
 import subprocess
 import time
 import os
-from funciones.EscribirLog import WriteLog
+from Funciones.EscribirLog import WriteLog
 import pyautogui
 from pyautogui import ImageNotFoundException
-from funciones.Login import ObtenerSesionActiva
+from Funciones.Login import ObtenerSesionActiva
 from typing import List, Literal, Optional
-from config.init_config import in_config
+from Config.init_config import in_config
 
 from datetime import datetime, timedelta
 import calendar

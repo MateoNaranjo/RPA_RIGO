@@ -3,7 +3,7 @@
 import os
 from dotenv import load_dotenv
 from pathlib import Path
-#from config.init_config import in_config
+#from Config.init_config import in_config
 
 # Cargar .env
 load_dotenv()

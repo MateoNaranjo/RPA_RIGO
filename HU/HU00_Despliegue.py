@@ -5,7 +5,7 @@ from pathlib import Path
 from datetime import datetime
 import socket
 import traceback
-from config.init_config import init_config, in_config
+from Config.init_config import init_config, in_config
 
 class Reutilizables:
     """Clase para manejo de ambiente y logging del proyecto"""

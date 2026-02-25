@@ -1,17 +1,17 @@
 import traceback
 
-from funciones.ConexionSAP import ConexionSAP
+from Funciones.ConexionSAP import ConexionSAP
 
-from config.settings import SAP_CONFIG
-from config.init_config import in_config
+from Config.settings import SAP_CONFIG
+from Config.init_config import in_config
 from HU.HU01_LoginSAP import ObtenerSesionActiva
 import pyperclip
 
-from funciones.GuiShellFunciones import AbrirTransaccion
+from Funciones.GuiShellFunciones import AbrirTransaccion
 
 import os
-from funciones.FuncionesExcel import ExcelService as ServicioExcel
-from config.init_config import in_config as inConfig
+from Funciones.FuncionesExcel import ExcelService as ServicioExcel
+from Config.init_config import in_config as inConfig
 
 
 def main():
