@@ -79,7 +79,7 @@ def main():
     """
     # Número de Pedido  
     session.findById("wnd[0]/usr/ctxtR_EBELN-LOW").text = "4001155953"
-    session.findById("wnd[0]/usr/txtR_ERNAM-LOW").text = "FERNCAMS" #Responsable
+    session.findById("wnd[0]/usr/txtR_ERNAM-LOW").text = "FERNCAMS" #Responsable ERIIGUZV
     session.findById("wnd[0]/tbar[1]/btn[8]").press() #Ejecutar búsqueda
 
 

@@ -1451,6 +1451,7 @@ def AbrirTransaccion(session, transaccion):
     Realiza la busqueda de la transaccion requerida"""
 
     # TODO : Revisar log con Clases 
+    import logging
     logger = logging.getLogger(__name__)
     logger.info(f"Abrir Transaccion {transaccion}")
 
@@ -1490,3 +1491,183 @@ def AbrirTransaccion(session, transaccion):
         )
 
         return False
+    
+def LeerTXT_SAP_Universal(path: str) -> pd.DataFrame:
+    """
+    Parser universal para archivos TXT exportados desde SAP ALV con pipes.
+    Diseñado para RPA productivo.
+    """
+
+    import os
+
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"No existe archivo SAP: {path}")
+
+    # --- 1. Leer archivo con fallback encoding ---
+    lineas = []
+    for enc in ("latin-1", "cp1252", "utf-8"):
+        try:
+            with open(path, "r", encoding=enc) as f:
+                lineas = [l.rstrip("\n") for l in f]
+            break
+        except:
+            continue
+
+    if not lineas:
+        raise ValueError("Archivo SAP vacío o no legible")
+
+    # --- 2. Filtrar solo líneas de tabla SAP ---
+    lineas_tabla = []
+    for l in lineas:
+        if not l.startswith("|"):
+            continue
+        if set(l.replace("|", "").strip()) == {"-"}:
+            continue
+        lineas_tabla.append(l)
+
+    if not lineas_tabla:
+        raise ValueError("No se detectó tabla SAP válida")
+
+    # --- 3. Unificar multiline SAP ---
+    filas = []
+    buffer = None
+    pipe_ref = None
+
+    for linea in lineas_tabla:
+        pipes = linea.count("|")
+
+        if pipe_ref is None:
+            pipe_ref = pipes
+            buffer = linea
+            continue
+
+        if pipes == pipe_ref:
+            if buffer:
+                filas.append(buffer)
+            buffer = linea
+        else:
+            buffer += linea[1:]
+
+    if buffer:
+        filas.append(buffer)
+
+    # --- 4. Limpiar filas ---
+    data = []
+    for f in filas:
+        partes = [p.strip() for p in f.split("|")]
+        if partes and partes[0] == "":
+            partes.pop(0)
+        if partes and partes[-1] == "":
+            partes.pop()
+
+        # eliminar fila de totales SAP (*)
+        if partes and partes[0] == "*":
+            continue
+
+        if partes:
+            data.append(partes)
+
+    if len(data) < 2:
+        raise ValueError("Tabla SAP sin encabezado o sin datos")
+
+    encabezado = data[0]
+    cuerpo = data[1:]
+
+    # --- 5. Ajustar longitud filas ---
+    ancho = len(encabezado)
+    cuerpo_ok = []
+
+    for fila in cuerpo:
+        if len(fila) > ancho:
+            fila = fila[:ancho]
+        elif len(fila) < ancho:
+            fila = fila + [""] * (ancho - len(fila))
+        cuerpo_ok.append(fila)
+
+    df = pd.DataFrame(cuerpo_ok, columns=[c.strip() for c in encabezado])
+
+    # --- 6. Eliminar encabezados repetidos en medio ---
+    df = df[df.iloc[:, 0] != encabezado[0]]
+
+    return df.reset_index(drop=True)
+
+
+
+#import numpy as np
+
+def validar_estrategias_sap(df_sap, df_excel):
+    # --- A. Limpieza de Precios en SAP ---
+    # Convertimos a numero, quitamos puntos, cambiamos coma por punto y a float
+    df_sap['Precio_Num'] = pd.to_numeric(
+        df_sap['Precio neto'].astype(str)
+        .str.replace('.', '', regex=False)
+        .str.replace(',', '.', regex=False), 
+        errors='coerce'
+    ).fillna(0)
+
+    # --- B. Limpieza de Rangos en Excel Corregida ---
+    for col in ['Rango Auto min', 'Rango Auto max']:
+        # Convertimos a string, quitamos espacios y nos aseguramos de no multiplicar por 10 accidentalmente
+        # df_excel[col] = (
+        #     df_excel[col].astype(str)
+        #     .str.replace(r'[^0-9,.-]', '', regex=True) # Quita todo lo que no sea numero o separador
+        #     .str.replace('.', '', regex=False)        # Quita puntos de miles
+        #     .str.replace(',', '.', regex=False)        # Cambia coma decimal por punto
+        #     .str.replace('-', '0')                     # Maneja el guion como cero
+        # )
+        df_excel[col] = pd.to_numeric(df_excel[col], errors='coerce').fillna(0)
+
+    # RE-VALIDACIÓN VISUAL: Esto debe mostrar 612,816,751.0 y NO 6,128,168,000
+    print("Muestra de Rangos Excel cargados:")
+    print(df_excel[['ESTRAT', 'Rango Auto min', 'Rango Auto max']].head())
+
+    # # --- B. Limpieza de Rangos en Excel ---
+    # for col in ['Rango Auto min', 'Rango Auto max']:
+    #     df_excel[col] = pd.to_numeric(
+    #         df_excel[col].astype(str)
+    #         .str.replace('.', '', regex=False)
+    #         .str.replace(',', '.', regex=False)
+    #         .str.replace('-', '0'), # Maneja el guion del rango mínimo inicial
+    #         errors='coerce'
+    #     ).fillna(0)
+
+    # # IMPORTANTE: Filtrar el excel para quitar filas que tengan ambos rangos en 0
+    # df_excel_clean = df_excel[(df_excel['Rango Auto min'] > 0) | (df_excel['Rango Auto max'] > 0)].copy()
+
+    # --- C. Función de comparación fila por fila ---
+    def chequear_fila(fila_sap):
+        precio = fila_sap['Precio_Num']
+        estr_sap = str(fila_sap['Estr.']).strip().upper()
+        
+        # Buscamos en el excel el rango que le corresponde
+        # El precio debe ser >= Min y <= Max
+        match = df_excel[
+            (precio >= df_excel['Rango Auto min']) & 
+            (precio <= df_excel['Rango Auto max'])
+        ]
+        # print(f"rango minimo  {df_excel['Rango Auto min']}")
+        # print(f"rango maximo  {df_excel['Rango Auto max']}")
+        # print(f"Validando precio {precio} con estrategia SAP '{estr_sap}' -> Match encontrado: {match} filas")
+        
+        if not match.empty:
+            # estr_teorica = str(match.iloc[0]['ESTRAT']).strip().upper()
+            fila_match = match.iloc[0]
+            estr_teorica = str(fila_match['ESTRAT']).strip().upper()
+            r_min = fila_match['Rango Auto min']
+            r_max = fila_match['Rango Auto max']
+            
+            # DEBUG INDIVIDUAL POR FILA
+            print(f"---> Validando OC {fila_sap['Doc.compr.']}: Precio {precio}")
+            print(f"      Rango Encontrado: {r_min} a {r_max} (Estrategia: {estr_teorica})")
+            
+            if estr_sap == estr_teorica:
+                return "OK"
+            else:
+                return f"ERROR: Rango {r_min}-{r_max} exige {estr_teorica}"
+        else:
+            return "FUERA DE RANGO: No coincide con ningun rango del Excel"
+
+    # Aplicamos la lógica a todo el DataFrame de SAP
+    df_sap['Resultado_Validacion'] = df_sap.apply(chequear_fila, axis=1)
+    
+    return df_sap
