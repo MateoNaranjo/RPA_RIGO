@@ -54,6 +54,8 @@ def consultar_datos_hu04(sesion, numeroOC):
         # El historial sí cambia de posición, por eso usamos búsqueda dinámica aquí
         area_usuario = sesion.findById("wnd[0]/usr")
         grid_historial = buscar_por_id_parcial(area_usuario, "cntlGRIDCONTROL/shellcont/shell")
+
+
         
         if grid_historial:
             try:

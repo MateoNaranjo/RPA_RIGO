@@ -3,6 +3,7 @@ import re
 import win32com.client
 import threading
 
+from Funciones.CargarAnexo import _interaccion_ventana_windows
 from pywinauto import Desktop
 class TransaccionME2L:
 
@@ -55,8 +56,7 @@ class TransaccionME2L:
 
         desktop = Desktop(backend="win32")
         ventana = desktop.window(title_re="(?i)Save.*As.*")
-        cargador = GestionAnexos(self)
-        hilo_externo = threading.Thread(target=cargador._interaccion_ventana_windows, args=(ruta_archivo, ventana,))
+        hilo_externo = threading.Thread(target=_interaccion_ventana_windows, args=(ruta_archivo, ventana,))
         hilo_externo.daemon = True
         hilo_externo.start()
 

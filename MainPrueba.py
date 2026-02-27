@@ -96,5 +96,8 @@ def main():
     
 
 
-if __name__ == "__main__":
-    main()
+if __name__ =="__main__":
+    pruebaH01=Facturas()
+    pruebaH01.ejecutar()
+
+    
