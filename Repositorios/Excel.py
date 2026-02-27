@@ -1,4 +1,4 @@
-from Config.Database import Database
+from Config.database import Database
 
 class Excel:
 
@@ -128,7 +128,7 @@ class Excel:
         query = f"""
         SELECT TOP 2 *
         FROM PagoArriendos.{tabla}
-        WHERE Estado = 'Pendiente'
+        WHERE EstadoRegistro = 'Pendiente'
         """
 
         with Database.get_connection() as conn:
@@ -165,4 +165,3 @@ class Excel:
             print(f"Error al consultar la tabla {tabla}: {e}")
             return []
         
-

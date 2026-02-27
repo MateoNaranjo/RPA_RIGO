@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 from datetime import datetime
+from Config.init_config import in_config
 
 class HU03_DiagnosticoCierre:
     def __init__(self):
@@ -8,7 +9,7 @@ class HU03_DiagnosticoCierre:
         Clase para identificar si el bloqueo del pago es interno (Falta HES)
         o externo (Falta Factura del proveedor).
         """
-        self.ruta_reportes = r"\\192.168.50.169\RPA_RIGO_GestionPagodeArrendamientos\Resultados"
+        self.ruta_reportes = in_config("PathResultado")
 
     def ejecutar_diagnostico(self, resultado_sap):
         """
