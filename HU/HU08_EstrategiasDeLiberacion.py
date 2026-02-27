@@ -9,12 +9,12 @@ import pyperclip
 import traceback
 
 
-from Config.settings import SAP_CONFIG
+from Config.Settings import SAP_CONFIG
 from Config.init_config import in_config
 from Funciones.ConexionSAP import ConexionSAP
 from Funciones.consultarOC import consultarOC
 from Funciones.CargarAnexo import cargar_archivo_gos # Asegúrate de que este archivo exista
-from repositorios.Excel import Excel as ExcelDB
+from Repositorios.Excel import Excel as ExcelDB
 from Funciones.GuiShellFunciones import AbrirTransaccion,ObtenerSesionActiva,LeerTXT_SAP_Universal,validar_estrategias_sap
 from Funciones.EmailSender import EmailSender, EnviarNotificacionCorreo
 

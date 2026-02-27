@@ -1,4 +1,4 @@
-from repositorios.parametros import ParametrosRepository
+from Repositorios.Parametros import ParametrosRepository
 
 _CONFIG_CACHE = None
 

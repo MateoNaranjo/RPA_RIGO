@@ -11,7 +11,7 @@ import time
 from Funciones.ControlHU import control_hu
 from Funciones.EscribirLog import WriteLog
 from Funciones.ConexionSAP import ConexionSAP
-from Config.Senttings import SAP_CONFIG
+from Config.Settings import SAP_CONFIG
 from Config.init_config import in_config
 from Funciones.Excel import ExcelService
 from Repositorios.Excel import ExcelRepo

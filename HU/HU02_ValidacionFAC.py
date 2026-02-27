@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 from Funciones.ConexionSAP import ConexionSAP
 from Funciones.DatosHU04 import consultar_datos_hu04 # Reutilizamos la conexión
-from Config.settings import SAP_CONFIG
+from Config.Settings import SAP_CONFIG
 from Config.init_config import in_config
 
 class HU02_VerificacionDiaria:

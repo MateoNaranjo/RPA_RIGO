@@ -8,7 +8,7 @@ from email import encoders
 import os
 from typing import List, Optional
 from pathlib import Path
-from Config.settings import CONFIG_EMAIL
+from Config.Settings import CONFIG_EMAIL
 from Funciones.EscribirLog import WriteLog
 from Config.init_config import in_config
 

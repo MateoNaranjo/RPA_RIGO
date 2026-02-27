@@ -1,4 +1,4 @@
-from Config.database import Database
+from Config.Database import Database
 
 class Excel:
 

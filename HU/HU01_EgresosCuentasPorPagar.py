@@ -3,7 +3,7 @@ from datetime import datetime
 from Funciones.LeerXML import LectorFacturaXML
 from Funciones.ME2L import TransaccionME2L
 from Funciones.MIGO import TransaccionMIGO
-from Config.Senttings import SAP_CONFIG, CADENA_CONFIG
+from Config.Settings import SAP_CONFIG, CADENA_CONFIG
 from Config.init_config import in_config
 from Funciones.DescargarXML import login_colsubsidio, realizar_consulta, descargar_xml_final
 
