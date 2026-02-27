@@ -16,6 +16,7 @@ from Funciones.consultarOC import consultarOC
 from Funciones.CargarAnexo import cargar_archivo_gos # Asegúrate de que este archivo exista
 from repositorios.Excel import Excel as ExcelDB
 from Funciones.GuiShellFunciones import AbrirTransaccion,ObtenerSesionActiva,LeerTXT_SAP_Universal,validar_estrategias_sap
+from Funciones.EmailSender import EmailSender, EnviarNotificacionCorreo
 
 class  HU08_EstrategiasDeLiberacion:
     def __init__(self):
@@ -115,17 +116,11 @@ class  HU08_EstrategiasDeLiberacion:
         # Limpiar espacios en los nombres de las columnas
         df.columns = df.columns.str.strip()
         # Eliminar filas duplicadas basándonos en la columna 'Doc.compr.'
-        
-        # print("Columnas obtenidas del df_sap_validado :")
-        # print(df.columns.tolist())
-        # print(list(df))
-        # print(df.head())
-        # df.info()
-
         #df.drop_duplicates(subset=['Doc.compr.'], inplace=True)
         
+        
+        # Filtramos solo las columnas que existan en el DataFrame original #2
         columnas_interes = ['Fecha doc.', 'Estr.', 'Doc.compr.', 'Status Lib', 'Precio neto', 'Fecha Lib', 'Usuario Li', 'Fecha Lib.']
-        # Filtramos solo las columnas que existan en el DataFrame original
         columnas_validas = [col for col in columnas_interes if col in df.columns]
         df_final = df[columnas_validas].copy() # Aseguramos que solo trabajamos con las columnas que realmente existen en el DataFrame original
         # Convertir 'Precio neto' a numérico, manejando comas y puntos
@@ -142,14 +137,7 @@ class  HU08_EstrategiasDeLiberacion:
                 # "Usuario Li": "first",
                 # "Fecha Lib.": "first"
             }).reset_index()
-
-        # df_sum = df_final.groupby("Doc.compr.").agg({
-        #         "Precio neto": "sum",
-        #         "Acreedor": "first",
-        #         "Nombre 1": "first",
-        #         "Estr.": "first"
-        #     }).reset_index()
-        # Guardar el resultado en un nuevo CSV
+        # Guardar el DataFrame resultante en un nuevo archivo CSV para revisar resultados intermedios
         df_sum.to_csv(os.path.join(rutaGuardar, f"EstrategiasDeLiberacion{fecha_formateada}.csv"), index=False)
 
         # Cargar la hoja específica
@@ -165,16 +153,13 @@ class  HU08_EstrategiasDeLiberacion:
         print("Columnas obtenidas del df_sap_validado :")
         print(df_sap_validado[['Doc.compr.', 'Precio neto', 'Estr.', 'Resultado_Validacion']])
 
-        
-        # print(df_sap_validado.columns.tolist())
-        # print(list(df_sap_validado))
-        # print(df_sap_validado.head())
-        # df_sap_validado.info()
-            
 
 
+        EnviarNotificacionCorreo( codigoCorreo=1,nombreTarea="Prueba RIGO - Notificacion",)
 
-    
+           
+
+   
 
 
         try : 

@@ -1607,33 +1607,8 @@ def validar_estrategias_sap(df_sap, df_excel):
 
     # --- B. Limpieza de Rangos en Excel Corregida ---
     for col in ['Rango Auto min', 'Rango Auto max']:
-        # Convertimos a string, quitamos espacios y nos aseguramos de no multiplicar por 10 accidentalmente
-        # df_excel[col] = (
-        #     df_excel[col].astype(str)
-        #     .str.replace(r'[^0-9,.-]', '', regex=True) # Quita todo lo que no sea numero o separador
-        #     .str.replace('.', '', regex=False)        # Quita puntos de miles
-        #     .str.replace(',', '.', regex=False)        # Cambia coma decimal por punto
-        #     .str.replace('-', '0')                     # Maneja el guion como cero
-        # )
         df_excel[col] = pd.to_numeric(df_excel[col], errors='coerce').fillna(0)
-
-    # RE-VALIDACIÓN VISUAL: Esto debe mostrar 612,816,751.0 y NO 6,128,168,000
-    print("Muestra de Rangos Excel cargados:")
-    print(df_excel[['ESTRAT', 'Rango Auto min', 'Rango Auto max']].head())
-
-    # # --- B. Limpieza de Rangos en Excel ---
-    # for col in ['Rango Auto min', 'Rango Auto max']:
-    #     df_excel[col] = pd.to_numeric(
-    #         df_excel[col].astype(str)
-    #         .str.replace('.', '', regex=False)
-    #         .str.replace(',', '.', regex=False)
-    #         .str.replace('-', '0'), # Maneja el guion del rango mínimo inicial
-    #         errors='coerce'
-    #     ).fillna(0)
-
-    # # IMPORTANTE: Filtrar el excel para quitar filas que tengan ambos rangos en 0
-    # df_excel_clean = df_excel[(df_excel['Rango Auto min'] > 0) | (df_excel['Rango Auto max'] > 0)].copy()
-
+   
     # --- C. Función de comparación fila por fila ---
     def chequear_fila(fila_sap):
         precio = fila_sap['Precio_Num']
@@ -1645,9 +1620,6 @@ def validar_estrategias_sap(df_sap, df_excel):
             (precio >= df_excel['Rango Auto min']) & 
             (precio <= df_excel['Rango Auto max'])
         ]
-        # print(f"rango minimo  {df_excel['Rango Auto min']}")
-        # print(f"rango maximo  {df_excel['Rango Auto max']}")
-        # print(f"Validando precio {precio} con estrategia SAP '{estr_sap}' -> Match encontrado: {match} filas")
         
         if not match.empty:
             # estr_teorica = str(match.iloc[0]['ESTRAT']).strip().upper()
@@ -1657,8 +1629,8 @@ def validar_estrategias_sap(df_sap, df_excel):
             r_max = fila_match['Rango Auto max']
             
             # DEBUG INDIVIDUAL POR FILA
-            print(f"---> Validando OC {fila_sap['Doc.compr.']}: Precio {precio}")
-            print(f"      Rango Encontrado: {r_min} a {r_max} (Estrategia: {estr_teorica})")
+            # print(f"---> Validando OC {fila_sap['Doc.compr.']}: Precio {precio}")
+            # print(f"      Rango Encontrado: {r_min} a {r_max} (Estrategia: {estr_teorica})")
             
             if estr_sap == estr_teorica:
                 return "OK"
