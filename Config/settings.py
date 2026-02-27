@@ -1,4 +1,4 @@
-# config/settings.py
+# config/Settings.py
 
 import os
 from dotenv import load_dotenv
@@ -38,7 +38,7 @@ SAP_CONFIG = {
 # ========= CONEXION BASE DE DATOS ==========
 DB_CONFIG = {
     "host": get_env_variable("SERVERDB"),
-    "database": get_env_variable("NAMEDB"),
+    "Database": get_env_variable("NAMEDB"),
     "user": get_env_variable("USERDB"),
     "password": get_env_variable("PASSWORDDB"),
     "schema": get_env_variable("SCHEMA"),    

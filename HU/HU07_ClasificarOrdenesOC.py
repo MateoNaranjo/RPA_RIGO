@@ -3,7 +3,7 @@ import logging
 import pandas as pd
 from datetime import datetime
 import time
-from Config.Senttings import SAP_CONFIG
+from Config.Settings import SAP_CONFIG
 from Config.init_config import in_config
 from Funciones.ConexionSAP import ConexionSAP
 from Funciones.consultarOC import consultarOC

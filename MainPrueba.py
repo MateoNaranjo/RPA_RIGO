@@ -2,7 +2,7 @@ import traceback
 
 from Funciones.ConexionSAP import ConexionSAP
 
-from Config.settings import SAP_CONFIG
+from Config.Settings import SAP_CONFIG
 from Config.init_config import in_config
 from HU.HU01_LoginSAP import ObtenerSesionActiva
 import pyperclip

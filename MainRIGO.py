@@ -1,4 +1,4 @@
-from repositorios.Excel import Excel
+from Repositorios.Excel import Excel
 from HU.HU07_ClasificarOrdenesOC import HU07_ClasificarOC
 from HU.HU08_EstrategiasDeLiberacion import HU08_EstrategiasDeLiberacion
 from HU.HU00_Despliegue import Reutilizables
@@ -30,8 +30,8 @@ if __name__ == "__main__":
     # pruebaExcel=HU07_ClasificarOC()
     # pruebaExcel.ejecutar()
 
-    ejecucionHu01 = Facturas()
-    ejecucionHu01.ejecutar()
+    # ejecucionHu01 = Facturas()
+    # ejecucionHu01.ejecutar()
 
     # ejecucionHu04=HU04_Auditoria()
     # ejecucionHu04.ejecutar()

@@ -6,7 +6,7 @@ import warnings
 import pandas as pd
 
 from Config.init_config import in_config
-from repositorios.Excel import Excel
+from Repositorios.Excel import Excel
 
 
 

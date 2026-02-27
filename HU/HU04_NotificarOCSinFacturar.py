@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from Funciones.DatosHU04 import consultar_datos_hu04
 from Funciones.ConexionSAP import ConexionSAP
-from Config.settings import SAP_CONFIG
+from Config.Settings import SAP_CONFIG
 from Config.init_config import in_config
 
 class HU04_Auditoria:

@@ -1,6 +1,6 @@
 import pyodbc
 import logging
-from Config.settings import DB_CONFIG
+from Config.Settings import DB_CONFIG
 logger = logging.getLogger(__name__)
 
 class Database:
@@ -14,7 +14,7 @@ class Database:
             conn = pyodbc.connect(
                 f"DRIVER={{ODBC Driver 17 for SQL Server}};"
                 f"SERVER= {DB_CONFIG.get('host')};"
-                f"DATABASE={DB_CONFIG.get('database')};"
+                f"Database={DB_CONFIG.get('Database')};"
                 f"UID={DB_CONFIG.get('user')};"
                 f"PWD={DB_CONFIG.get('password')};"
                 "TrustServerCertificate=yes;"
