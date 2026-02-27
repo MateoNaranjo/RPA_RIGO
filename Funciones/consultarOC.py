@@ -4,7 +4,7 @@ import os
 import time           # Para rutas del File Server
 from datetime import datetime, timedelta
 from Funciones.ConexionSAP import ConexionSAP
-from Config.Senttings import SAP_CONFIG
+from Config.settings import SAP_CONFIG
 from Config.init_config import in_config
 
 def consultarOC(sesion, numeroOC):

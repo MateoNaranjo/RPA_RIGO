@@ -2,7 +2,7 @@ import win32com.client
 import time
 import subprocess
 from pathlib import Path
-from Config.Senttings import SAP_CONFIG, PROCESO_CONFIG
+from Config.settings import SAP_CONFIG, PROCESO_CONFIG
 from HU.HU00_Despliegue import ambiente
 
 class ConexionSAP:
@@ -43,7 +43,7 @@ class ConexionSAP:
         if not self.abrir_SAP():
             return None
         
-        max_intentos = PROCESO_CONFIG['MAX_REINTENTOS_SAP']
+        max_intentos = PROCESO_CONFIG['ReIntentos']
         
         for intento in range(1, max_intentos + 1):
             try:
@@ -88,6 +88,7 @@ class ConexionSAP:
     def ingresar_SAP(self, sesion):
         """Realiza login en SAP"""
         try:
+            
             self.logger.info("Iniciando proceso de login")
             sesion.findById("wnd[0]").maximize()
             sesion.findById("wnd[0]/usr/txtRSYST-BNAME").text = self.usuario
@@ -115,6 +116,7 @@ class ConexionSAP:
     def iniciar_sesion_sap(self):
         """Proceso completo de iniciar sesión"""
         try:
+            
             sesion = self.conectar_SAP()
             if not sesion:
                 raise Exception("No se pudo crear la sesión SAP")
@@ -164,10 +166,10 @@ class ConexionSAP:
 
 '''ejecutarMain=PagoArriendos(SAP_CONFIG.get('SAP_USUARIO'),
                             SAP_CONFIG.get('SAP_PASSWORD'),
-                            SAP_CONFIG.get('SAP_CLIENTE'),
-                            SAP_CONFIG.get('SAP_IDIOMA'),
-                            SAP_CONFIG.get('SAP_PATH'),
-                            SAP_CONFIG.get('SAP_SISTEMA')
+                            SAP_CONFIG.get('SapMandante'),
+                            SAP_CONFIG.get('SapIdioma'),
+                            SAP_CONFIG.get('SapRutaLogon'),
+                            SAP_CONFIG.get('SapSistema')
                             )
 ejecutarMain.abrir_SAP()
 ejecutarMain.ingresar_SAP(ejecutarMain.conectar_SAP())'''

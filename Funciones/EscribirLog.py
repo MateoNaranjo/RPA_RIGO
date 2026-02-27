@@ -1,66 +1,93 @@
 # ================================
 # Funcion: WriteLog
-# Autor: Paula Sierra - NetApplications
+# Autor: Paula Sierra - Steven Navarro - NetApplications
 # Descripcion: Registrar eventos en archivo log con estructura estándar
-# Ultima modificacion: 24/11/2025
+# Ultima modificacion: 11/02/2026
 # Propiedad de Colsubsidio
-# Cambios: Versión inicial
+# Cambios:
+# - Se agregan validaciones
+# - Se corrige creación de carpetas
+# - Se normaliza estructura línea
+# - Se agrega argumento fijo para ruta de logs desde inconfig
 # ================================
 
 import datetime
 import os
 import getpass
 import socket
+import traceback
+from Config.init_config import in_config
 
-
-def WriteLog(mensaje: str, estado: str, task_name: str, path_log: str):
+ 
+def WriteLog(mensaje: str = "Mensaje vacío", estado: str = "INFO", nombreTarea: str = "TaskNoDefinida", rutaRegistro = in_config("PathLog"),):
     """
     mensaje  : Texto del log
     estado   : INFO, DEBUG, WARN, ERROR
-    task_name: Nombre de HU o Main (ej. 'HU00_DespliegueAmbiente')
-    path_log : str → ruta de la carpeta de logs
+    nombreTarea: Nombre de HU o Main
+    rutaRegistro : Ruta de carpeta Logs o archivo .log
     """
 
-    # === Fecha para línea y archivo ===
-    ahora = datetime.datetime.now()
-    fecha_linea = ahora.strftime("%d/%m/%Y %H:%M:%S")
-    fecha_archivo = ahora.strftime("%Y%m%d")
+    try:
+        # ==========================================================
+        # 1. Validaciones básicas
+        # ==========================================================
+        if not mensaje:
+            mensaje = "Mensaje vacío"
 
-    # === Datos del sistema ===
-    nombre_maquina = socket.gethostname()
-    usuario = getpass.getuser()
+        if not nombreTarea:
+            nombreTarea = "TaskNoDefinida"
 
-    # ------------------------------------------------------------------
-    # 1. Determinar si path_log es carpeta o archivo
-    # ------------------------------------------------------------------
-    base, extension = os.path.splitext(path_log)
+        estado = estado.upper()
+        if estado not in ["INFO", "DEBUG", "WARN", "ERROR"]:
+            estado = "INFO"
 
-    if extension:
-        # → es un archivo: "C:/.../error.log"
-        carpeta_logs = os.path.dirname(path_log)
-        ruta_archivo = path_log
-    else:
-        # → es carpeta: "C:/.../Logs"
-        carpeta_logs = path_log
-        nombre_archivo = f"Log_{nombre_maquina}_{usuario}_{fecha_archivo}.log"
-        ruta_archivo = os.path.join(carpeta_logs, nombre_archivo)
+        # ==========================================================
+        # 2. Fecha
+        # ==========================================================
+        ahora = datetime.datetime.now()
+        fecha_linea = ahora.strftime("%d/%m/%Y %H:%M:%S")
+        fechaArchivo = ahora.strftime("%Y%m%d")
 
-    # === Asegurar que la carpeta existe ===
-    os.makedirs(path_log, exist_ok=True)
+        # ==========================================================
+        # 3. Datos del sistema
+        # ==========================================================
+        nombre_maquina = socket.gethostname()
+        usuario = getpass.getuser()
 
-    # === Construcción de línea con estructura estándar ===
-    """
-    FECHA HORA | ESTADO | TASKNAME | MENSAJE | NOMBRE_MAQUINA | USUARIO
-    """
-    linea = (
-        f"{fecha_linea} | "
-        f"{estado:<5} | "
-        f"{task_name} | "
-        f"{mensaje} | "
-        f"{nombre_maquina} | "
-        f"{usuario}\n"
-    )
+        # ==========================================================
+        # 4. Determinar ruta final
+        # ==========================================================
+        base, extension = os.path.splitext(rutaRegistro)
 
-    # === Guardar log ===
-    with open(ruta_archivo, "a", encoding="utf-8") as f:
-        f.write(linea)
+        if extension:
+            carpeta_logs = os.path.dirname(rutaRegistro)
+            rutaArchivo = rutaRegistro
+        else:
+            carpeta_logs = rutaRegistro
+            nombreArchivo = f"Log_{nombre_maquina}_{usuario}_{fechaArchivo}.txt"
+            rutaArchivo = os.path.join(carpeta_logs, nombreArchivo)
+
+        os.makedirs(carpeta_logs, exist_ok=True)
+
+        # ==========================================================
+        # 5. Construcción línea estándar
+        # ==========================================================
+        linea = (
+            f"{fecha_linea} | "
+            f"{estado} | "
+            f"{mensaje} | "
+            f"{in_config('CodigoRobot')} | "
+            f"{nombreTarea} | "
+            "\n"
+        )
+
+        # ==========================================================
+        # 6. Escritura
+        # ==========================================================
+        with open(rutaArchivo, "a", encoding="utf-8") as f:
+            f.write(linea)
+
+    except Exception as e:
+        # Nunca debe romper el bot por logging
+        print(f"ERROR | Fallo WriteLog: {e} - {traceback.format_exc()}")
+        # TODO : pasar error a la funcion writelog 
