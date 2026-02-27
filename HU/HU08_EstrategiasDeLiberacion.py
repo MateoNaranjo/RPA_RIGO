@@ -158,7 +158,7 @@ class  HU08_EstrategiasDeLiberacion:
         EnviarNotificacionCorreo( codigoCorreo=1,nombreTarea="Prueba RIGO - Notificacion",)
 
            
-
+        #Pull request desde HU08_EstrategiasDeLiberacion - Steven Navarro
    
 
 
