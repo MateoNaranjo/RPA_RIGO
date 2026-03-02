@@ -162,15 +162,3 @@ class ConexionSAP:
 
 
 
-
-
-'''ejecutarMain=PagoArriendos(SAP_CONFIG.get('SAP_USUARIO'),
-                            SAP_CONFIG.get('SAP_PASSWORD'),
-                            SAP_CONFIG.get('SapMandante'),
-                            SAP_CONFIG.get('SapIdioma'),
-                            SAP_CONFIG.get('SapRutaLogon'),
-                            SAP_CONFIG.get('SapSistema')
-                            )
-ejecutarMain.abrir_SAP()
-ejecutarMain.ingresar_SAP(ejecutarMain.conectar_SAP())'''
-
