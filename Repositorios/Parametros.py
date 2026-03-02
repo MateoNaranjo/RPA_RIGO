@@ -7,7 +7,8 @@ class ParametrosRepository:
 
     @staticmethod
     def cargar_parametros() -> dict:
-        conn = Database.get_connection()
+        db = Database()
+        conn = db.get_connection()
         cursor = conn.cursor()
 
         cursor.execute("""

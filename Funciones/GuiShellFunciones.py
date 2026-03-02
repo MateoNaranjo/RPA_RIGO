@@ -14,6 +14,7 @@ import re
 import subprocess
 import time
 import os
+from Funciones.EmailSender import EnviarCorreoPersonalizado
 from Funciones.EscribirLog import WriteLog
 import pyautogui
 from pyautogui import ImageNotFoundException
@@ -1643,3 +1644,51 @@ def validar_estrategias_sap(df_sap, df_excel):
     df_sap['Resultado_Validacion'] = df_sap.apply(chequear_fila, axis=1)
     
     return df_sap
+
+
+def NotificarErroresEstrategia(df_sap_validado, correo_destino):
+    """
+    Filtra las OCs con error y envía un correo con el resumen.
+    """
+    # 1. Filtramos solo los errores para el cuerpo del correo
+    df_errores = df_sap_validado[df_sap_validado['Resultado_Validacion'] != 'OK']
+    
+    if df_errores.empty:
+        print("No hay errores que reportar.")
+        return
+
+    # 2. Creamos el listado en formato HTML para el cuerpo del correo
+    # Convertimos el dataframe a una tabla HTML bonita
+    tabla_html = df_errores[['Doc.compr.', 'Precio neto', 'Estr.', 'Resultado_Validacion']].to_html(index=False, classes='table')
+
+    asunto = f"Resumen de Errores en Estrategias SAP - {len(df_errores)} hallazgos"
+
+    style = "<style>table {border-collapse: collapse;} th, td {border: 1px solid black; padding: 5px;} th {background-color: #f2f2f2;}</style>"
+    cuerpo = f"""
+    <html>
+    <head>{style}</head>
+        <body>
+            <h2>Reporte Automático de Validación de Estrategias</h2>
+            <p>Se han detectado discrepancias en las siguientes Órdenes de Compra:</p>
+            {tabla_html}
+            <br>
+            <p>Favor revisar el archivo adjunto para más detalle.</p>
+            <p><i>Atentamente, Robot RIGO</i></p>
+        </body>
+    </html>
+    """
+
+    # 3. Guardamos el reporte completo a Excel para enviarlo como adjunto
+    ruta_adjunto = "Reporte_Validacion_Estrategias.xlsx"
+    df_sap_validado.to_excel(ruta_adjunto, index=False)
+
+    # 4. Usamos tu función personalizada para enviar
+    exito = EnviarCorreoPersonalizado(
+        destinatario=correo_destino,
+        asunto=asunto,
+        cuerpo=cuerpo,
+        adjuntos=[ruta_adjunto],
+        nombreTarea="ValidacionSAP"
+    )
+    
+    return exito
