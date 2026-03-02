@@ -3,17 +3,11 @@ import re
 import logging
 import pandas as pd
 import datetime
-import time
-import threading
 import pyperclip
-import traceback
 
-
-from Config.Settings import CONFIG_EMAIL, SAP_CONFIG
+from Config.Settings import SAP_CONFIG
 from Config.init_config import in_config
 from Funciones.ConexionSAP import ConexionSAP
-from Funciones.consultarOC import consultarOC
-from Funciones.CargarAnexo import cargar_archivo_gos # Asegúrate de que este archivo exista
 from Repositorios.Excel import Excel as ExcelDB
 from Funciones.GuiShellFunciones import AbrirTransaccion, NotificarErroresEstrategia,ObtenerSesionActiva,LeerTXT_SAP_Universal,validar_estrategias_sap
 from Funciones.EmailSender import EmailSender, EnviarCorreoPersonalizado, EnviarNotificacionCorreo
@@ -103,11 +97,10 @@ class  HU08_EstrategiasDeLiberacion:
 
 
         # Guardar resultados en Excel
-        rutaGuardar = in_config("PathTemp") 
+        rutaGuardar = f"{in_config('PathTemp')}\HU08"
         session.findById("wnd[0]/tbar[1]/btn[45]").press()
         session.findById("wnd[1]/tbar[0]/btn[0]").press()
         session.findById("wnd[1]/usr/ctxtDY_PATH").text = rutaGuardar
-        #time.sleep(10)  # Esperar a que se abra la ventana de guardado
         session.findById("wnd[1]/usr/ctxtDY_FILENAME").text = f"EstrategiasDeLiberacion{fecha_formateada}.txt"
         session.findById("wnd[1]/tbar[0]/btn[0]").press()
 
@@ -155,6 +148,7 @@ class  HU08_EstrategiasDeLiberacion:
 
 
         df.to_csv(os.path.join(rutaGuardar, f"EstrategiasDeLiberacion{fecha_formateada}.csv"), index=False)
+        #df.to_sql(f"EstrategiasDeLiberacion_{fecha_formateada}", con=ExcelDB.get_engine(self), if_exists='replace', index=False) # Guardamos el resultado en SQL Server para futuras consultas o integraciones con Power BI
         df = pd.read_excel(os.path.join(rutaGuardar, f"EstrategiasDeLiberacionPrueba1.xlsx"))
 
         print(type(df))
