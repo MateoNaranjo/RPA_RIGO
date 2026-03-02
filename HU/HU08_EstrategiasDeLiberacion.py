@@ -9,6 +9,7 @@ from Config.Settings import SAP_CONFIG
 from Config.init_config import in_config
 from Funciones.ConexionSAP import ConexionSAP
 from Repositorios.Excel import Excel as ExcelDB
+from Config.Database import Database
 from Funciones.GuiShellFunciones import AbrirTransaccion, NotificarErroresEstrategia,ObtenerSesionActiva,LeerTXT_SAP_Universal,validar_estrategias_sap
 from Funciones.EmailSender import EmailSender, EnviarCorreoPersonalizado, EnviarNotificacionCorreo
 
@@ -41,25 +42,17 @@ class  HU08_EstrategiasDeLiberacion:
         session = ObtenerSesionActiva()
 
         AbrirTransaccion(session, "ZMM_68")
-        """
-        pues digamos, la mayoría de órdenes se hace en enero, sí, pero pues acá sería bueno colocar,
-        digamos en el mes en que está, porque pronto generemos alguna orden durante el mes o algo. 
-        Entonces para que la consulte si alguna cosa o k listo, pues coloquemosle acá hasta que que me que estrés.
-        """
-
-        # Obtenemos la fecha y hora actual
-        ahora = datetime.datetime.now()
+          
+        ahora = datetime.datetime.now() # Obtenemos la fecha y hora actual
         fecha_formateada = ahora.strftime("%d.%m.%Y") # Ejemplo de salida: 01.01.2026
-        # Crear una fecha usando el año actual, mes 1, día 1
-        primer_dia_anio = datetime.date(ahora.year, 1, 1)
+        primer_dia_anio = datetime.date(ahora.year, 1, 1)    # Crear una fecha usando el año actual, mes 1, día 1
         primer_dia_anio = primer_dia_anio.strftime("%d.%m.%Y")  # Ejemplo de salida: 01.01.2026
-
 
         session.findById("wnd[0]/usr/ctxtR_BEDAT-LOW").text = primer_dia_anio #Primer dia del año actual 
         session.findById("wnd[0]/usr/ctxtR_BEDAT-HIGH").text = fecha_formateada #Fecha actual
         
         # Grupo de Organización de Compras
-        grupoOrgCompras = ["OC03","OC30","OC02"]
+        grupoOrgCompras = ["OC03","OC30","OC02"]# Esto lo puedes traer de la tabla de la base de datos db, parametros 
         texto_sap = "\r\n".join(grupoOrgCompras)
         pyperclip.copy(texto_sap)
         session.findById("wnd[0]/usr/btn%_R_EKORG_%_APP_%-VALU_PUSH").press() # Abre Ventana org de Compras 
@@ -67,13 +60,12 @@ class  HU08_EstrategiasDeLiberacion:
         session.findById("wnd[1]/tbar[0]/btn[24]").press()
         session.findById("wnd[1]/tbar[0]/btn[8]").press()
 
-        # Estado de la OC
+        # Estado de la OC // Actualizacion : se traen todos los estados, no es necesario filtrar.
         #session.findById("wnd[0]/usr/ctxtR_FRGKE-LOW").text = "B" # se Filtra por estado de bloqueo, B 
 
         # Número de Pedido  
-        #session.findById("wnd[0]/usr/ctxtR_EBELN-LOW").text = "4001155953"
-        listaOC = ["4001109218","4001109602","4001109605","4001109690","4001109698","4001109712","4001109718","4001109720","4001110010",
-                   "4001155953","4001155956","4001155955","4001155957"]
+        #session.findById("wnd[0]/usr/ctxtR_EBELN-LOW").text = "4001155953" # solo para validar una OC. para pruebas 
+        listaOC = ["4001155953","4001155956","4001155955","4001155957"] # Esto lo puedes traer de tu tabla de la base de datos db, base medicamentos 
         texto_sap = "\r\n".join(listaOC)
         pyperclip.copy(texto_sap)
         session.findById("wnd[0]/usr/btn%_R_EBELN_%_APP_%-VALU_PUSH").press() # Abre ventana numero de pedido
@@ -82,7 +74,7 @@ class  HU08_EstrategiasDeLiberacion:
         session.findById("wnd[1]/tbar[0]/btn[8]").press()
               
         # Responsable
-        responsable = ["FERNCAMS","ERIIGUZV"]
+        responsable = ["FERNCAMS","ERIIGUZV"] # Esto lo puedes traer de la tabla de la base de datos db, parametros 
         texto_sap = "\r\n".join(responsable)
         pyperclip.copy(texto_sap)
         session.findById("wnd[0]/usr/btn%_R_ERNAM_%_APP_%-VALU_PUSH").press() # Abre ventana responsable de la OC
@@ -104,10 +96,23 @@ class  HU08_EstrategiasDeLiberacion:
         session.findById("wnd[1]/usr/ctxtDY_FILENAME").text = f"EstrategiasDeLiberacion{fecha_formateada}.txt"
         session.findById("wnd[1]/tbar[0]/btn[0]").press()
 
-        df = LeerTXT_SAP_Universal(os.path.join(rutaGuardar, f"EstrategiasDeLiberacion{fecha_formateada}.txt"))
+        #df = LeerTXT_SAP_Universal(os.path.join(rutaGuardar, f"EstrategiasDeLiberacion{fecha_formateada}.txt"))
+        df = pd.read_excel(os.path.join(rutaGuardar, f"EstdeliberacionEjemplos.xlsx"))
+        
         # Limpiar espacios en los nombres de las columnas
         #df.columns = df.columns.str.strip()
         df.columns = [re.sub(r'\s+', ' ', str(col)).strip() for col in df.columns]
+
+
+        print(type(df))
+        print("Columnas obtenidas del TXT:")
+        print(df.columns.tolist())
+        print("Columnas obtenidas del list(df):")
+        print(list(df))
+        print("Columnas obtenidas del df.head():")
+        print(df.head())
+        print("Columnas obtenidas del  df.info()")
+        print(df.info())
 
 
         # Identificar y renombrar duplicados
@@ -148,18 +153,13 @@ class  HU08_EstrategiasDeLiberacion:
 
 
         df.to_csv(os.path.join(rutaGuardar, f"EstrategiasDeLiberacion{fecha_formateada}.csv"), index=False)
-        #df.to_sql(f"EstrategiasDeLiberacion_{fecha_formateada}", con=ExcelDB.get_engine(self), if_exists='replace', index=False) # Guardamos el resultado en SQL Server para futuras consultas o integraciones con Power BI
+
+        db= Database()
+        engine = db.get_engine()
+        df.to_sql(f"EstrategiasDeLiberacion", con=engine, if_exists='replace', index=False, schema='PagoArriendos') # Guardamos el resultado en SQL Server para futuras consultas o integraciones con Power BI
         df = pd.read_excel(os.path.join(rutaGuardar, f"EstrategiasDeLiberacionPrueba1.xlsx"))
 
-        print(type(df))
-        print("Columnas obtenidas del TXT:")
-        print(df.columns.tolist())
-        print("Columnas obtenidas del list(df):")
-        print(list(df))
-        print("Columnas obtenidas del df.head():")
-        print(df.head())
-        print("Columnas obtenidas del  df.info()")
-        print(df.info())
+        
 
         # === 1. PREPARACIÓN DE GRUPOS ===
         # Grupo de Bloqueadas (B) - Se envían todas juntas a un correo fijo
@@ -208,11 +208,11 @@ class  HU08_EstrategiasDeLiberacion:
             cuerpo_b = f"<h3>Listado de OCs Bloqueadas:</h3> {df_bloqueadas.to_html(index=False)}"
         
             # Enviamos usando tu función personalizada
-            EnviarCorreoPersonalizado(
-            destinatario=destinatario_b,
-            asunto=asunto_b,
-            cuerpo=cuerpo_b,
-            nombreTarea="Notificacion_Bloqueadas")
+            # EnviarCorreoPersonalizado(
+            # destinatario=destinatario_b,
+            # asunto=asunto_b,
+            # cuerpo=cuerpo_b,
+            # nombreTarea="Notificacion_Bloqueadas")
 
         # --- CASO 2: STATUS 'P' (Correo según Estrategia) ---
         if not df_pendientes.empty:
@@ -226,12 +226,12 @@ class  HU08_EstrategiasDeLiberacion:
                 asunto_p = f"OC Pendientes por Liberar - Estrategia: {estrategia}"
                 cuerpo_p = f"<h3>OCs asignadas a su estrategia {estrategia}:</h3> {grupo.to_html(index=False)}"
                 
-                EnviarCorreoPersonalizado(
-                    destinatario=correo_estrategia,
-                    asunto=asunto_p,
-                    cuerpo=cuerpo_p,
-                    nombreTarea=f"Notificacion_Pendientes_{estrategia}"
-                )
+                # EnviarCorreoPersonalizado(
+                #     destinatario=correo_estrategia,
+                #     asunto=asunto_p,
+                #     cuerpo=cuerpo_p,
+                #     nombreTarea=f"Notificacion_Pendientes_{estrategia}"
+                # )
 
         # --- CASO 3: STATUS 'L' (Solo guardamos el Excel con la información completa) ---
         if not df_final_L.empty:
@@ -287,13 +287,13 @@ class  HU08_EstrategiasDeLiberacion:
                 
                 # Enviar
                 print(f"📧 Enviando Caso 3 a: {correo_proveedor}")
-                EnviarCorreoPersonalizado(
-                    destinatario=correo_proveedor,
-                    asunto=asunto,
-                    cuerpo=cuerpo_html,
-                    nombreTarea=f"Notificacion_Liberadas_Arrendatarios{estrategia}"
+                # EnviarCorreoPersonalizado(
+                #     destinatario=correo_proveedor,
+                #     asunto=asunto,
+                #     cuerpo=cuerpo_html,
+                #     nombreTarea=f"Notificacion_Liberadas_Arrendatarios{estrategia}"
                     
-                )
+                # )
           
    
 

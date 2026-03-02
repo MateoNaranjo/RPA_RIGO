@@ -30,6 +30,7 @@ class Database:
                 "TrustServerCertificate=yes;"
             )
             return pyodbc.connect(conn_str)
+        
         except Exception:
             logger.error("Error conectando a SQL Server vía pyodbc", exc_info=True)
             raise
@@ -43,7 +44,8 @@ class Database:
             try:
                 # Escapar la contraseña para evitar errores con caracteres especiales
                 safe_password = urllib.parse.quote_plus(self.password)
-                
+
+                # Cadena de conexión estándar para SQL Server
                 conn_str = (
                     f"mssql+pyodbc://{self.user}:{safe_password}@{self.host}/{self.db}"
                     "?driver=ODBC+Driver+17+for+SQL+Server"
@@ -51,6 +53,7 @@ class Database:
                 
                 # fast_executemany=True optimiza las inserciones de Pandas
                 self._engine = create_engine(conn_str, fast_executemany=True)
+                
                 logger.info("Engine de SQLAlchemy creado exitosamente.")
                 
             except Exception:

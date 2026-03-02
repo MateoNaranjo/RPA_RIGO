@@ -46,9 +46,9 @@ class Reutilizables:
         )
         
         self.logger = logging.getLogger(__name__)
-        self.logger.info("=" * 80)
+        #self.logger.info("=" * 80)
         self.logger.info("Sistema de logging inicializado")
-        self.logger.info("=" * 80)
+        #self.logger.info("=" * 80)
     
     def crear_carpetas(self):
         """Crea todas las carpetas necesarias para el proyecto"""
