@@ -21,6 +21,8 @@ from pyautogui import ImageNotFoundException
 from Funciones.Login import ObtenerSesionActiva
 from typing import List, Literal, Optional
 from Config.init_config import in_config
+import logging
+logger = logging.getLogger(__name__)
 
 from datetime import datetime, timedelta
 import calendar
@@ -1451,9 +1453,7 @@ def AbrirTransaccion(session, transaccion):
     transaccion: transaccion a buscar
     Realiza la busqueda de la transaccion requerida"""
 
-    # TODO : Revisar log con Clases 
-    import logging
-    logger = logging.getLogger(__name__)
+
     logger.info(f"Abrir Transaccion {transaccion}")
 
     try:
@@ -1482,7 +1482,7 @@ def AbrirTransaccion(session, transaccion):
             nombreTarea="AbrirTransaccion",
             
         )
-        print(f"Transaccion {transaccion} abierta")
+        logger.info(f"Transaccion {transaccion} abierta")
         return True
     except Exception as e:
         WriteLog(

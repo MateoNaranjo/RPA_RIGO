@@ -15,7 +15,7 @@ def ObtenerSesionActiva():
         for conn in application.Connections:
             if conn.Children.Count > 0:
                 session = conn.Children(0)
-                looger.info(f" Sesion encontrada en conexión: {conn.Description}")
+                looger.info(f" Sesion encontrada en conexion: {conn.Description}")
                 return session
 
         looger.warning(" No se encontró ninguna sesion activa.")
@@ -23,4 +23,4 @@ def ObtenerSesionActiva():
 
     except Exception as e:
         looger.error(f" Error al obtener la sesion activa: {e}")
-        return None
+        return None 

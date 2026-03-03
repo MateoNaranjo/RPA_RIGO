@@ -104,15 +104,15 @@ class  HU08_EstrategiasDeLiberacion:
         df.columns = [re.sub(r'\s+', ' ', str(col)).strip() for col in df.columns]
 
 
-        print(type(df))
-        print("Columnas obtenidas del TXT:")
-        print(df.columns.tolist())
-        print("Columnas obtenidas del list(df):")
-        print(list(df))
-        print("Columnas obtenidas del df.head():")
-        print(df.head())
-        print("Columnas obtenidas del  df.info()")
-        print(df.info())
+        # print(type(df))
+        # print("Columnas obtenidas del TXT:")
+        # print(df.columns.tolist())
+        # print("Columnas obtenidas del list(df):")
+        # print(list(df))
+        # print("Columnas obtenidas del df.head():")
+        # print(df.head())
+        # print("Columnas obtenidas del  df.info()")
+        # print(df.info())
 
 
         # Identificar y renombrar duplicados
