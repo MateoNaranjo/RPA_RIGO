@@ -1,20 +1,21 @@
 from Repositorios.Excel import Excel
-#from HU.HU07_ClasificarOrdenesOC import HU07_ClasificarOC
-from HU.HU08_EstrategiasDeLiberacion import HU08_EstrategiasDeLiberacion
+from HU.HU07_ClasificarOrdenesOC import HU07_ClasificarOC
+#from HU.HU08_EstrategiasDeLiberacion import HU08_EstrategiasDeLiberacion
 from HU.HU00_Despliegue import Reutilizables
 
 from HU.HU04_NotificarOCSinFacturar import HU04_Auditoria
 from HU.HU03_OCSinFactura import HU03_DiagnosticoCierre
 from HU.HU02_ValidacionFAC import HU02_VerificacionDiaria
 from HU.HU05_GestionAnexos import HU05_CargueSQL
+from HU.HU01_EgresosCuentasPorPagar import Facturas
 
 
 if __name__ == "__main__":
 
    
 
-    pruebaExcel=HU08_EstrategiasDeLiberacion()
-    pruebaExcel.ejecutar()
+    '''pruebaExcel=HU08_EstrategiasDeLiberacion()
+    pruebaExcel.ejecutar()'''
    
 
     """
@@ -27,14 +28,14 @@ if __name__ == "__main__":
     hu06: Validacion de presupuesto
     hu05: Cargar reportes a la bse de datos
     """
-    # pruebaExcel=HU07_ClasificarOC()
-    # pruebaExcel.ejecutar()
+    pruebaExcel=HU07_ClasificarOC()
+    pruebaExcel.ejecutar()
 
-    # ejecucionHu01 = Facturas()
-    # ejecucionHu01.ejecutar()
+    #ejecucionHu01 = Facturas()
+    #ejecucionHu01.ejecutar()
 
-    # ejecucionHu04=HU04_Auditoria()
-    # ejecucionHu04.ejecutar()
+    #ejecucionHu04=HU04_Auditoria()
+    #ejecucionHu04.ejecutar()
 
 
     # nombre_archivo=r"Informe_Auditoria_Facturacion_20260116_0942.xlsx"

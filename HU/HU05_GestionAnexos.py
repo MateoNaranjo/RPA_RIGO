@@ -48,7 +48,7 @@ class HU05_CargueSQL:
             
             # Query ajustada a los títulos de tu imagen
             query_insert = """
-                INSERT INTO PagoArriendos.Reporte_Final_Arriendos (
+                INSERT INTO PagoArriendos.Reporte_HU07(
                     OC, Estado_FAC, Tiene_HES, Diagnostico_Cierre, 
                     Responsable_Accion, Accion_Sugerida, Fecha_Analisis
                 ) VALUES (?, ?, ?, ?, ?, ?, ?)

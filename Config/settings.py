@@ -35,23 +35,28 @@ SAP_CONFIG = {
     "password": get_env_variable("SAP_PASSWORD"),
 }
 
+CADENA_CONFIG={
+    "usuario":get_env_variable("CADENA_USUARIO"),
+    "contrasena":get_env_variable("CADENA_CONTRASENA"),
+    "ruta":get_env_variable("CADENA_RUTA")
+}
+
 # ========= CONEXION BASE DE DATOS ==========
 DB_CONFIG = {
     "host": get_env_variable("SERVERDB"),
     "Database": get_env_variable("NAMEDB"),
     "user": get_env_variable("USERDB"),
-    "password": get_env_variable("PASSWORDDB"),
-    "schema": get_env_variable("SCHEMA"),    
+    "password": get_env_variable("PASSWORDDB"),    
 }
 
 
 # ========= CONFIG EMAIL ==========
-CONFIG_EMAIL = {
+'''CONFIG_EMAIL = {
     "smtp_server": get_env_variable("EMAIL_SMTP_SERVER"),
     "smtp_port": get_env_variable("EMAIL_SMTP_PORT"),
     "email": get_env_variable("EMAIL_USER"),
     "password": get_env_variable("EMAIL_PASSWORD"),  # IMPORTANTE: Cambiar por variable de entorno en producción
-}
+}'''
 
 # ========= RUTAS =========
 # RUTAS = {
