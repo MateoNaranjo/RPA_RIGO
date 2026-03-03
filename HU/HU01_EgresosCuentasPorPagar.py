@@ -1,11 +1,14 @@
 from Funciones.ConexionSAP import ConexionSAP
 from datetime import datetime
+from pathlib import Path
 from Funciones.LeerXML import LectorFacturaXML
 from Funciones.ME2L import TransaccionME2L
 from Funciones.MIGO import TransaccionMIGO
+import pandas as pd
 from Config.Settings import SAP_CONFIG, CADENA_CONFIG
 from Config.init_config import in_config
-from Funciones.DescargarXML import login_colsubsidio, realizar_consulta, descargar_xml_final
+from Config.Database import Database
+from Funciones.DescargarXML import login_colsubsidio, realizar_consulta, descargar_xml_final, mover_archivos, renombrar_archivo
 
 
 class Facturas:
@@ -20,18 +23,81 @@ class Facturas:
         )
         self.sesion = None
 
-        self.cadenaUsuario=CADENA_CONFIG.get('CADENA_USUARIO')
-        self.cadenaContraseña=CADENA_CONFIG.get('CADENA_CONTRASEÑA')
-        self.cadenaRuta=CADENA_CONFIG.get('CADENA_RUTA')
+        self.pathXML=Path(in_config('PathXML'))
+
+        self.rutaTemporal=in_config('PathTemp')
+        self.carpeta=self.rutaTemporal+"\\HU01"
+        self.rutaHU01=Path(self.carpeta)
+
+        self.cadenaUsuario=CADENA_CONFIG.get('usuario')
+        self.cadenaContraseña=CADENA_CONFIG.get('contrasena')
+        self.cadenaRuta=CADENA_CONFIG.get('ruta')
+
+        
+
+    def obtener_documentos(self, columna):
+        query=f"SELECT {columna} FROM PagoArriendos.ReporteHU07 WHERE EstadoSAP != 'No existe / Error'"
+        with Database.get_connection() as conn:
+            cursor =conn.cursor()
+            cursor.execute(query)
+            resultados =cursor.fetchall()
+            return [row[0] for row in resultados]
+    
+    def obtener_documentos_oc(self, columna, nit):
+        query=f"SELECT {columna} FROM PagoArriendos.ReporteHU07 WHERE NIT = '{nit}'"
+        with Database.get_connection() as conn:
+            cursor =conn.cursor()
+            cursor.execute(query)
+            resultados =cursor.fetchall()
+            return [row[0] for row in resultados]
+        
+            
 
     def descargar_XML(self):
-        nro_documento="4001249504"
+        documentos_no_encontrados = []
         try:
+            documentos = self.obtener_documentos('NIT')  # consulta a la DB
+            
             sesion = login_colsubsidio(self.cadenaUsuario, self.cadenaContraseña, self.cadenaRuta)
-            realizar_consulta(sesion, oc=nro_documento)
-            descargar_xml_final(sesion)
-        except Exception:
-            print("error al ingresar al aplicativo cadena")
+            contadorOc=0
+            contador=0
+            
+            for nro_documento in documentos:
+                contador+=1
+                try:
+                    print("AAAAAAAAA")
+                    oc=self.obtener_documentos_oc('Oc', nro_documento)
+                    print("EEEEEEEE")
+                    realizar_consulta(contador, sesion, oc=nro_documento )
+                    print("IIIIIIIII")
+                    descargar_xml_final(sesion)
+                    print("OOOOOOOOOOOO")
+                    print(f"[+] XML descargado para documento {nro_documento}")
+
+                    mover_archivos(r"C:\ProgramData\RPA_RIGO", self.pathXML, 'xml')
+                    print("uuuuuuuuuuuuuu")
+                    renombrar_archivo(self.pathXML, oc[contadorOc], 'xml')
+                    print(oc[contadorOc])
+                    contadorOc+=1
+
+                    
+                except Exception as e:
+                    print(f"[-] No se encontró XML para documento {nro_documento} {e}")
+                    documentos_no_encontrados.append({
+                        "NumeroDocumento": nro_documento,
+                        "Estado": "No encontrado"
+                    })
+
+            #   Generar reporte en Excel si hay documentos no encontrados
+            if documentos_no_encontrados:
+                df = pd.DataFrame(documentos_no_encontrados)
+                timestamp = datetime.now().strftime("%Y%m%d")
+                ruta_reporte = f"{self.rutaHU01}"+f"\\HU01\\XML_No_Encontrados_{timestamp}.xlsx"
+                df.to_excel(ruta_reporte, index=False)
+                print(f"[!] Reporte generado: {ruta_reporte}")
+
+        except Exception as e:
+            print(f"Error al ingresar al aplicativo cadena: {e}")
 
     def comparar_XML_SAP(self):
         self.sap.iniciar_sesion_sap()
@@ -48,6 +114,7 @@ class Facturas:
 
 
     def ejecutar(self):
+       print("RUTAAAAAAAAAAAAAA", self.cadenaRuta)
        self.descarga= Facturas.descargar_XML(self)
        self.consultaSAP=Facturas.comparar_XML_SAP(self)
        self.descarga

@@ -22,12 +22,12 @@ class HU04_Auditoria:
             in_config('SapSistema')
         )
         self.sesion = None
-        self.ruta_input = r"\\192.168.50.169\RPA_RIGO_GestionPagodeArrendamientos\Resultados"
+        self.ruta_input = r"\\192.168.50.169\RPA_RIGO_GestionPagodeArrendamientos\Temp\HU07"
         self.ruta_output = r"\\192.168.50.169\RPA_RIGO_GestionPagodeArrendamientos\Resultados\Reportes_HU04"
 
     def buscar_ultimo_reporte_hu07(self):
         """Busca el archivo más reciente de la HU07 usando comodines."""
-        patron = os.path.join(self.ruta_input, "Reporte_Gestion_HU07_*.xlsx")
+        patron = os.path.join(self.ruta_input, "Reporte_HU07*.xlsx")
         archivos = glob.glob(patron)
         return max(archivos, key=os.path.getctime) if archivos else None
 
@@ -99,6 +99,3 @@ class HU04_Auditoria:
         print(f"\n[!] PROCESO FINALIZADO. Reporte en: {nombre}")
 
 # --- PUNTO DE ENTRADA ---
-if __name__ == "__main__":
-    bot = HU04_Auditoria()
-    bot.ejecutar()

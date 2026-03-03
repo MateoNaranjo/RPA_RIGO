@@ -138,7 +138,7 @@ class Reutilizables:
         #     # ExcelService.ejecutarBulkDesdeExcel(rutaParametros, sheet="ALL")
         #     #TicketInsumoRepo.crearPCTicketInsumo( estado=100, observaciones= "Cargue de insumo")
         # except Exception as e: 
-        #     #TicketInsumoRepo.crearPCTicketInsumo( error= 99, observaciones="Carge de insumo " )
+        #     #TicketInsumoRepo.crearPCTicketInsumo( error= 99, observaciones="Carge de insumo")
         #     print("Error al cargar insumo Despliegue HU00 envio correos")
         #     traceback.print_exc()
 

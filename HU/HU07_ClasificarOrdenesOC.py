@@ -2,9 +2,11 @@ import re
 import logging
 import pandas as pd
 from datetime import datetime
+from pathlib import Path
 import time
 from Config.Settings import SAP_CONFIG
 from Config.init_config import in_config
+from Config.Database import Database
 from Funciones.ConexionSAP import ConexionSAP
 from Funciones.consultarOC import consultarOC
 from Funciones.CargarAnexo import cargar_archivo_gos
@@ -17,13 +19,18 @@ class HU07_ClasificarOC:
         """
         self.logger = logging.getLogger("HU07_ClasificarOC")
         self.sap = ConexionSAP(
-            SAP_CONFIG.get('SAP_USUARIO'),
-            SAP_CONFIG.get('SAP_PASSWORD'),
+            SAP_CONFIG.get('user'),
+            SAP_CONFIG.get('password'),
             in_config('SapMandante'),
             in_config('SapIdioma'),
             in_config('SapRutaLogon'),
             in_config('SapSistema')
+            
         )
+        
+        self.rutaTemporal=in_config('PathTemp')
+        self.carpeta=self.rutaTemporal+"\\HU07"
+        self.rutaHU07=Path(self.carpeta)
         self.sesion = None
         self.nombreTabla = "BaseMedicamentoslimpio"
 
@@ -77,27 +84,28 @@ class HU07_ClasificarOC:
 
                         # 4. Cargar Anexo si está liberada
                         if es_liberada:
-                            ruta_pdf = r"\\192.168.50.169\RPA_RIGO_GestionPagodeArrendamientos\Insumos\Anexos\Prueba.txt"
+                            ruta_pdf = r"\\192.168.50.169\RPA_RIGO_GestionPagodeArrendamientos\Insumo\Anexos\Prueba.txt"
                             exito_carga = cargar_archivo_gos(self.sesion, oc_numero, ruta_pdf, self.logger)
                             anexo_status = "Cargado Exitosamente" if exito_carga else "Error en Carga"
 
                             time.sleep(1)
                             self.sesion.findById("wnd[0]/tbar[0]/okcd").text = "/n"
                             self.sesion.findById("wnd[0]").sendVKey(0)
-
+                        nit = registro.get('nit', 'N/A')
                         base_datos_reporte.append({
                             "OC": oc_numero,
                             "Proveedor": proveedor,
                             "Monto": monto,
                             "Estado SAP": estado_final,
-                            "Anexo GOS": anexo_status
+                            "Anexo GOS": anexo_status,
+                            "NIT": nit
                         })
                         print(f"[*] Procesada OC {oc_numero} - {estado_final}")
 
                     else:
                         base_datos_reporte.append({
                             "OC": oc_numero, "Proveedor": proveedor, "Monto": 0,
-                            "Estado SAP": "No existe / Error", "Anexo GOS": "N/A"
+                            "Estado SAP": "No existe / Error", "Anexo GOS": "N/A", "NIT": nit
                         })
                         print(f"[-] OC {oc_numero} no encontrada.")
 
@@ -107,6 +115,9 @@ class HU07_ClasificarOC:
 
             # 5. Generar Reporte Final
             self.generar_reporte_excel(base_datos_reporte)
+            
+            timestamp = datetime.now().strftime("%Y%d%m")
+            self.ejecutar_cargue_desde_excel(f"{self.rutaTemporal}"+f"\HU07\Reporte_HU07{timestamp}.xlsx")
 
         except Exception as e:
             self.logger.error(f"Falla crítica en HU07: {e}")
@@ -128,9 +139,15 @@ class HU07_ClasificarOC:
             return "Monto Bajo"
         
         df['Clasificación Monto'] = df['Monto'].apply(clasificar_monto)
-
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-        ruta_reporte = f"\\\\192.168.50.169\\RPA_RIGO_GestionPagodeArrendamientos\\Resultados\\Reporte_Gestion_HU07_{timestamp}.xlsx"
+        df = df.astype(str)
+        
+        if not self.rutaHU07.exists():
+            self.rutaHU07.mkdir(parents=True, exist_ok=True)
+            print('carpeta {self.carpeta} creada con exito')
+        else:
+            print('la carpeta {self.carpeta} ya existe')
+        timestamp = datetime.now().strftime("%Y%d%m")
+        ruta_reporte = f"{self.rutaTemporal}"+f"\HU07\Reporte_HU07{timestamp}.xlsx"
 
         try:
             df.to_excel(ruta_reporte, index=False)
@@ -144,3 +161,74 @@ class HU07_ClasificarOC:
             
         except Exception as e:
             print(f"Error al guardar el Excel: {e}")
+    
+    @staticmethod
+    def crear_tabla_HU07():
+        tabla="PagoArriendos.ReporteHU07"
+
+        query=f"""
+        IF OBJECT_ID('{tabla}', 'U') IS NOT NULL
+            DROP TABLE {tabla};
+
+        CREATE TABLE {tabla} (
+            Oc VARCHAR(20) PRIMARY KEY,
+            Proveedor VARCHAR(100),
+            Monto VARCHAR(100),
+            EstadoSAP VARCHAR(20),
+            Anexo VARCHAR(20),
+            ClasificacionMonto VARCHAR(20),
+            NIT VARCHAR(20)
+
+            )
+        """
+
+        try:
+            with Database.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(query)
+                conn.commit()
+                print(f"[+] Tabla {tabla} configuraicon con los titulos de la HU07")
+                return True
+        except Exception as e:
+            print(f"[-] Error creando tabla: {e}")
+            return False
+
+
+    @staticmethod
+    def ejecutar_cargue_desde_excel(ruta_excel):
+        tabla="PagoArriendos.ReporteHU07"
+        if not HU07_ClasificarOC.crear_tabla_HU07():
+            return
+        
+        try:
+            df=pd.read_excel(ruta_excel)
+
+            query_insert = f"""
+                INSERT INTO {tabla} (
+                Oc, Proveedor, Monto, EstadoSAP, Anexo, ClasificacionMonto, NIT) VALUES (?,?,?,?,?,?,?)
+            """
+
+            with Database.get_connection() as conn:
+                cursor =conn.cursor()
+
+                for _, fila in df.iterrows():
+
+                    valores=(
+                        str(fila.get('OC')),
+                        str(fila.get('Proveedor')),
+                        str(fila.get('Monto')),
+                        str(fila.get('Estado SAP')),
+                        str(fila.get('Anexo GOS')),
+                        str(fila.get('Clasificación Monto')),
+                        str(fila.get('NIT'))
+                    )
+
+                    cursor.execute(query_insert, valores)
+
+                conn.commit()
+                print(f"[+] Éxito: Se cargaron {len(df)} registros a SQL Server.")
+
+        except Exception as e:
+            print(f"[-] Error en el cargue: {e}")
+
+    
