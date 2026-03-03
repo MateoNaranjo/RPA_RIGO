@@ -11,6 +11,7 @@ from Funciones.ConexionSAP import ConexionSAP
 from Funciones.consultarOC import consultarOC
 from Funciones.CargarAnexo import cargar_archivo_gos
 from Repositorios.Excel import Excel as ExcelDB
+from sqlalchemy import types
 
 class HU07_ClasificarOC:
     def __init__(self):
@@ -96,8 +97,8 @@ class HU07_ClasificarOC:
                             "OC": oc_numero,
                             "Proveedor": proveedor,
                             "Monto": monto,
-                            "Estado SAP": estado_final,
-                            "Anexo GOS": anexo_status,
+                            "EstadoSAP": estado_final,
+                            "Anexo": anexo_status,
                             "NIT": nit
                         })
                         print(f"[*] Procesada OC {oc_numero} - {estado_final}")
@@ -105,7 +106,7 @@ class HU07_ClasificarOC:
                     else:
                         base_datos_reporte.append({
                             "OC": oc_numero, "Proveedor": proveedor, "Monto": 0,
-                            "Estado SAP": "No existe / Error", "Anexo GOS": "N/A", "NIT": nit
+                            "EstadoSAP": "No existe / Error", "Anexo": "N/A", "NIT": nit
                         })
                         print(f"[-] OC {oc_numero} no encontrada.")
 
@@ -117,7 +118,24 @@ class HU07_ClasificarOC:
             self.generar_reporte_excel(base_datos_reporte)
             
             timestamp = datetime.now().strftime("%Y%d%m")
-            self.ejecutar_cargue_desde_excel(f"{self.rutaTemporal}"+f"\HU07\Reporte_HU07{timestamp}.xlsx")
+            db= Database()
+            engine = db.get_engine()
+            df = pd.read_excel(f"{self.rutaTemporal}"+f"\HU07\Reporte_HU07{timestamp}.xlsx")
+
+            dydtype = {
+                'Oc': types.VARCHAR(20),
+                'Proveedor': types.VARCHAR(100),
+                'Monto': types.VARCHAR(100),
+                'EstadoSAP': types.VARCHAR(20),
+                'Anexo': types.VARCHAR(20),
+                'ClasificacionMonto': types.VARCHAR(20),
+                'NIT': types.VARCHAR(20)
+              
+            }
+
+            df.to_sql(f"ReporteHU07", con=engine, if_exists='replace', index=False, schema='PagoArriendos', dtype=dydtype)
+
+            #self.ejecutar_cargue_desde_excel(f"{self.rutaTemporal}"+f"\HU07\Reporte_HU07{timestamp}.xlsx")
 
         except Exception as e:
             self.logger.error(f"Falla crítica en HU07: {e}")
@@ -162,8 +180,9 @@ class HU07_ClasificarOC:
         except Exception as e:
             print(f"Error al guardar el Excel: {e}")
     
-    @staticmethod
-    def crear_tabla_HU07():
+
+    def crear_tabla_HU07(self):
+        db= Database()
         tabla="PagoArriendos.ReporteHU07"
 
         query=f"""
@@ -183,7 +202,7 @@ class HU07_ClasificarOC:
         """
 
         try:
-            with Database.get_connection() as conn:
+            with db.get_connection(self) as conn:
                 cursor = conn.cursor()
                 cursor.execute(query)
                 conn.commit()
@@ -194,8 +213,9 @@ class HU07_ClasificarOC:
             return False
 
 
-    @staticmethod
-    def ejecutar_cargue_desde_excel(ruta_excel):
+
+    def ejecutar_cargue_desde_excel(self,ruta_excel):
+        db= Database()
         tabla="PagoArriendos.ReporteHU07"
         if not HU07_ClasificarOC.crear_tabla_HU07():
             return
@@ -208,7 +228,7 @@ class HU07_ClasificarOC:
                 Oc, Proveedor, Monto, EstadoSAP, Anexo, ClasificacionMonto, NIT) VALUES (?,?,?,?,?,?,?)
             """
 
-            with Database.get_connection() as conn:
+            with db.get_connection(self) as conn:
                 cursor =conn.cursor()
 
                 for _, fila in df.iterrows():

@@ -27,8 +27,9 @@ class HU05_CargueSQL:
             Fecha_Cargue_DB DATETIME DEFAULT GETDATE()
         );
         """
+        db = Database()
         try:
-            with Database.get_connection() as conn:
+            with db.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(query)
                 conn.commit()
@@ -53,8 +54,9 @@ class HU05_CargueSQL:
                     Responsable_Accion, Accion_Sugerida, Fecha_Analisis
                 ) VALUES (?, ?, ?, ?, ?, ?, ?)
             """
+            db= Database()
             
-            with Database.get_connection() as conn:
+            with db.get_connection() as conn:
                 cursor = conn.cursor()
                 
                 for _, fila in df.iterrows():

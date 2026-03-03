@@ -25,9 +25,9 @@ class Excel:
             {columnas_sql}
         );
         """
-
+        db = Database()
         try:
-            with Database.get_connection() as conn:
+            with db.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(query)
                 conn.commit()
@@ -54,9 +54,10 @@ class Excel:
             Estado VARCHAR(100) NOT NULL DEFAULT 'Pendiente'
         );
         """
+        db= Database()
 
         try:
-            with Database.get_connection() as conn:
+            with db.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(query)
                 conn.commit()
@@ -102,8 +103,11 @@ class Excel:
         DROP TABLE PagoArriendos.{tabla_temp};
         """
 
+        db= Database()
+
+
         try:
-            with Database.get_connection() as conn:
+            with db.get_connection() as conn:
                 conn.autocommit = True
                 cursor = conn.cursor()
 
@@ -130,8 +134,9 @@ class Excel:
         FROM PagoArriendos.{tabla}
         WHERE EstadoRegistro = 'Pendiente'
         """
+        db= Database()
 
-        with Database.get_connection() as conn:
+        with db.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query)
 
@@ -149,9 +154,10 @@ class Excel:
         FROM PagoArriendos.{tabla}
         WHERE EstadoRegistro = 'Pendiente'
         """
+        db= Database()
 
         try:
-            with Database.get_connection() as conn:
+            with db.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(query)
 

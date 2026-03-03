@@ -51,12 +51,12 @@ DB_CONFIG = {
 
 
 # ========= CONFIG EMAIL ==========
-'''CONFIG_EMAIL = {
+CONFIG_EMAIL = {
     "smtp_server": get_env_variable("EMAIL_SMTP_SERVER"),
     "smtp_port": get_env_variable("EMAIL_SMTP_PORT"),
     "email": get_env_variable("EMAIL_USER"),
     "password": get_env_variable("EMAIL_PASSWORD"),  # IMPORTANTE: Cambiar por variable de entorno en producción
-}'''
+}
 
 # ========= RUTAS =========
 # RUTAS = {

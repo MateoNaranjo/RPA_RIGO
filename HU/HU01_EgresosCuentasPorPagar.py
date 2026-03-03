@@ -9,6 +9,9 @@ from Config.Settings import SAP_CONFIG, CADENA_CONFIG
 from Config.init_config import in_config
 from Config.Database import Database
 from Funciones.DescargarXML import login_colsubsidio, realizar_consulta, descargar_xml_final, mover_archivos, renombrar_archivo
+import logging
+looger = logging.getLogger(__name__)
+
 
 
 class Facturas:
@@ -37,7 +40,8 @@ class Facturas:
 
     def obtener_documentos(self, columna):
         query=f"SELECT {columna} FROM PagoArriendos.ReporteHU07 WHERE EstadoSAP != 'No existe / Error'"
-        with Database.get_connection() as conn:
+        db= Database()
+        with db.get_connection() as conn:
             cursor =conn.cursor()
             cursor.execute(query)
             resultados =cursor.fetchall()
@@ -45,7 +49,8 @@ class Facturas:
     
     def obtener_documentos_oc(self, columna, nit):
         query=f"SELECT {columna} FROM PagoArriendos.ReporteHU07 WHERE NIT = '{nit}'"
-        with Database.get_connection() as conn:
+        db = Database()
+        with db.get_connection() as conn:
             cursor =conn.cursor()
             cursor.execute(query)
             resultados =cursor.fetchall()
@@ -65,24 +70,24 @@ class Facturas:
             for nro_documento in documentos:
                 contador+=1
                 try:
-                    print("AAAAAAAAA")
+                    looger.info("AAAAAAAAA")
                     oc=self.obtener_documentos_oc('Oc', nro_documento)
-                    print("EEEEEEEE")
+                    looger.info("EEEEEEEE")
                     realizar_consulta(contador, sesion, oc=nro_documento )
-                    print("IIIIIIIII")
+                    looger.info("IIIIIIIII")
                     descargar_xml_final(sesion)
-                    print("OOOOOOOOOOOO")
-                    print(f"[+] XML descargado para documento {nro_documento}")
+                    looger.info("OOOOOOOOOOOO")
+                    looger.info(f"[+] XML descargado para documento {nro_documento}")
 
-                    mover_archivos(r"C:\ProgramData\RPA_RIGO", self.pathXML, 'xml')
-                    print("uuuuuuuuuuuuuu")
+                    #mover_archivos(r"C:\ProgramData\RPA_RIGO", self.pathXML, 'xml')
+                    looger.info("uuuuuuuuuuuuuu")
                     renombrar_archivo(self.pathXML, oc[contadorOc], 'xml')
-                    print(oc[contadorOc])
+                    looger.info(oc[contadorOc])
                     contadorOc+=1
 
                     
                 except Exception as e:
-                    print(f"[-] No se encontró XML para documento {nro_documento} {e}")
+                    looger.info(f"[-] No se encontró XML para documento {nro_documento} {e}")
                     documentos_no_encontrados.append({
                         "NumeroDocumento": nro_documento,
                         "Estado": "No encontrado"
@@ -99,9 +104,9 @@ class Facturas:
         except Exception as e:
             print(f"Error al ingresar al aplicativo cadena: {e}")
 
-    def comparar_XML_SAP(self):
+    def comparar_XML_SAP(self,oc):
         self.sap.iniciar_sesion_sap()
-        xml_path = r"C:\ProgramData\RIGO\Insumo\ad090063145002525021701C7.xml"
+        xml_path = rf"{self.pathXML}\{oc}.xml"
         datos = LectorFacturaXML(xml_path).obtener_datos()
         
         me2l = TransaccionME2L(self.sap)

@@ -21,8 +21,9 @@ class ControlHURepository:
             INSERT (HU, NombreHU, Estado, Activa, Maquina)
             VALUES (?, ?, ?, ?, ?);
         """
+        db= Database()
 
-        with Database.get_connection() as conn:
+        with db.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 query,

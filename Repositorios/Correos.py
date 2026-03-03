@@ -14,8 +14,9 @@ class CorreosRepo:
         query = """"
             SELECT * FROM PagoArriendos.ParametrosCorreo WHERE CodEmailParamter = ?
         """
+        db = Database()
 
-        with Database.get_connection() as conn:
+        with db.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, cod_email)
             fila = cursor.fetchone()

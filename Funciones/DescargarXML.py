@@ -13,6 +13,9 @@ import shutil
 import time
 import os
 
+from Config.init_config import in_config
+
+
 
 
 
@@ -21,7 +24,7 @@ def login_colsubsidio(usuario, contraseña, ruta):
     chrome_options.add_experimental_option("detach", True)
     
     prefs = {
-        "download.default_directory": os.getcwd(),
+        "download.default_directory": in_config("PathXML"),
         "download.prompt_for_download": False,
         "download.directory_upgrade": True,
         "safebrowsing.enabled": True, 
@@ -77,7 +80,7 @@ def login_colsubsidio(usuario, contraseña, ruta):
 
     except Exception as e:
         print(f"Error inesperado: {e}")
-        driver.save_screenshot("error.png")
+        driver.save_screenshot(f"{in_config('PathScreenshots')}\error.png")
         return driver
     
 
@@ -170,7 +173,7 @@ def realizar_consulta(contador, driver, oc = None, nro_documento = None):
 
     except Exception as e:
         print(f"Error durante la consulta: {e}")
-        driver.save_screenshot("error_consulta.png")
+        driver.save_screenshot(f"{in_config('PathScreenshots')}\error_consulta.png")
         
 def descargar_xml_final(driver):
     wait = WebDriverWait(driver, 20)

@@ -4,7 +4,8 @@ from Config.Database import Database
 class GestionTicketInsumo:
 
     def __init__(self, conn):
-        self.conn = conn or Database.get_connection()
+        db= Database()
+        self.conn = conn or db.get_connection()
 
     def obtener_por_codigo(self, codigo):
         query ="""
