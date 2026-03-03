@@ -5,6 +5,9 @@ import subprocess
 import os
 from Config.init_config import in_config
 
+import logging
+looger = logging.getLogger(__name__)
+
 from Funciones.ValidacionM21N import ventana_abierta
 
 import pyautogui
@@ -61,15 +64,15 @@ def conectar_sap(conexion, mandante, usuario, password, idioma="ES"):
             connection = application.OpenConnection(conexion, True)
             time.sleep(3)  # Esperar que abra
         else:
-            print(f"✅ Conexion existente encontrada con {conexion}.")
+            looger.info(f"✅ Conexion existente encontrada con {conexion}.")
 
         # 4️⃣ Verificar sesión
         if connection.Children.Count > 0:
             session = connection.Children(0)
-            print("Sesion existente reutilizada.")
+            looger.info("Sesion existente reutilizada.")
         else:
             session = connection.Children(0).CreateSession()
-            print(" Nueva sesion creada.")
+            looger.info(" Nueva sesion creada.")
 
         # 5️⃣ Si la pantalla está en login, ingresar credenciales
         # if "RSYST-BNAME" in session.findById("wnd[0]/usr").Text:
@@ -83,7 +86,7 @@ def conectar_sap(conexion, mandante, usuario, password, idioma="ES"):
         session.findById("wnd[0]/usr/pwdRSYST-BCODE").text = password
         session.findById("wnd[0]/usr/txtRSYST-LANGU").text = idioma
         session.findById("wnd[0]").sendVKey(0)
-        print(" Conectado correctamente a SAP.")
+        looger.info(" Conectado correctamente a SAP.")
 
         if ventana_abierta(session, "Copyrigth"):
             pyautogui.press("enter")
@@ -95,13 +98,13 @@ def conectar_sap(conexion, mandante, usuario, password, idioma="ES"):
                 intentos=20,
                 espera=0.5
             ):
-                print("Ventana loginDiag Copyrigth inesperada superada correctamente")
+                looger.info("Ventana loginDiag Copyrigth inesperada superada correctamente")
         except Exception as e:
-            print(f"no se encontro ventana Copyrigth en login {e}")
+            looger.info(f"no se encontro ventana Copyrigth en login {e}")
 
         if ventana_abierta(session, "Info de licencia en entrada al sistema múltiple"):
             
-            print("entro a la funcion click")
+            #print("entro a la funcion click")
             time.sleep(20)  
             pyautogui.click()
             pyautogui.press("enter")
@@ -114,14 +117,14 @@ def conectar_sap(conexion, mandante, usuario, password, idioma="ES"):
                     espera=0.5
                 ):  
                     pyautogui.click()
-                    print("encontro la imagen ")
-                    print("Ventana info de licencia inesperada superada correctamente")
+                    #print("encontro la imagen ")
+                    #looger.info("Ventana info de licencia inesperada superada correctamente")
             except Exception as e:
-                print(f"no se encontro ventana Copyrigth en login {e}")
+                looger.info(f"no se encontro ventana Copyrigth en login {e}")
         return session
 
     except Exception as e:
-        print(f" Error al conectar a SAP: {e}")
+        looger.error(f" Error al conectar a SAP: {e}")
         return None
 
 
@@ -135,14 +138,14 @@ def ObtenerSesionActiva():
         for conn in application.Connections:
             if conn.Children.Count > 0:
                 session = conn.Children(0)
-                print(f" Sesion encontrada en conexión: {conn.Description}")
+                looger.info(f" Sesion encontrada en conexión: {conn.Description}")
                 return session
 
-        print(" No se encontró ninguna sesion activa.")
+        looger.warning(" No se encontró ninguna sesion activa.")
         return None
 
     except Exception as e:
-        print(f" Error al obtener la sesion activa: {e}")
+        looger.error(f" Error al obtener la sesion activa: {e}")
         return None
 
 
@@ -169,6 +172,6 @@ def validarLoginDiag(ruta_imagen, confidence=0.5, intentos=3, espera=0.5):
             return True
         time.sleep(espera)
 
-    print(f" No se encontró la ventana login diag: {ruta_imagen}")
+    looger.warning(f" No se encontró la ventana login diag: {ruta_imagen}")
     return False
 
