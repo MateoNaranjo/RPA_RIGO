@@ -12,6 +12,7 @@ from Config.Settings import CONFIG_EMAIL
 from Funciones.EscribirLog import WriteLog
 from Config.init_config import in_config
 from Repositorios.Correos import CorreosRepo
+from Config.Database import Database
 
 
 class EmailSender:
@@ -49,13 +50,37 @@ class EmailSender:
         try:
             # Intentar leer con diferentes engines para mejor compatibilidad
             #df = pd.read_excel(archivo_excel, engine="openpyxl")
+            db= Database()
+            engine = db.get_engine()
+
             df = pd.read_excel(archivo_excel, engine="xlrd")  # Cambia el engine si tienes problemas con openpyxl
             print(f"data frame leido del excel {archivo_excel} : {df}")
-            print(df.head())  # DEBUG: Mostrar las primeras filas para verificar la lectura
+            print(type(df))
+            print("Columnas obtenidas del df de la base de datos:")
+            print(df.columns.tolist())
+            print("Columnas obtenidas del list(df):")
+            print(list(df))
+            print("Columnas obtenidas del df.head():")
+            print(df.head())
+            print("Columnas obtenidas del  df.info()")
+            print(df.info())
+            
+            # DEBUG: Mostrar las primeras filas para verificar la lectura
             # Limpiar espacios en blanco de las columnas
-            df2 = CorreosRepo.ObtenerParametrosCorreo(cod_email=1)
+            df2 = pd.read_sql_table("EnvioCorreos", engine, schema="PagoArriendos")
             print(f"data frame leido desde la base de datos : {df2}")
             print(df2.head()) 
+            print(f"data frame leido del excel {archivo_excel} : {df}")
+            print(type(df2))
+            print("Columnas obtenidas del df de la base de datos:")
+            print(df2.columns.tolist())
+            print("Columnas obtenidas del list(df):")
+            print(list(df2))
+            print("Columnas obtenidas del df.head():")
+            print(df2.head())
+            print("Columnas obtenidas del  df.info()")
+            print(df2.info())
+
             df.columns = df.columns.str.strip()
 
             return df

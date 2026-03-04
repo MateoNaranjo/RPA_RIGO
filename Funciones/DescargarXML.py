@@ -15,6 +15,8 @@ import os
 
 from Config.init_config import in_config
 
+import logging
+logger = logging.getLogger(__name__)
 
 
 
@@ -79,7 +81,7 @@ def login_colsubsidio(usuario, contraseña, ruta):
         return driver
 
     except Exception as e:
-        print(f"Error inesperado: {e}")
+        logger.exception(f"Error inesperado: {e}")
         driver.save_screenshot(f"{in_config('PathScreenshots')}\error.png")
         return driver
     

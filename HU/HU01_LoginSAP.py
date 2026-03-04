@@ -80,7 +80,7 @@ def conectar_sap(conexion, mandante, usuario, password, idioma="ES"):
         # if password is None:
         #     password = getpass.getpass("Contraseña SAP: ")
         # Ingresar datos de login
-        time.sleep(3)
+        #time.sleep(3)
         session.findById("wnd[0]/usr/txtRSYST-MANDT").text = mandante
         session.findById("wnd[0]/usr/txtRSYST-BNAME").text = usuario
         session.findById("wnd[0]/usr/pwdRSYST-BCODE").text = password

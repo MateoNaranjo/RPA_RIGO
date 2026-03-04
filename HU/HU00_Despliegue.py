@@ -7,6 +7,11 @@ import socket
 import traceback
 from Config.init_config import init_config, in_config
 
+import pandas as pd
+from sqlalchemy import text
+from Config.Database import Database
+
+
 class Reutilizables:
     """Clase para manejo de ambiente y logging del proyecto"""
     
@@ -34,7 +39,7 @@ class Reutilizables:
         
         # Configuración del logger
         logging.basicConfig(
-            level=logging.INFO,
+            level=logging.DEBUG, # Stev:  Cambiar a INFO, para borrar todos los mensajes modo DEBUG
             # FECHA HORA | ESTADO | MENSAJE | CODIGOROBOT | TASKNAME   
             format=rf'%(asctime)s | %(levelname)-2s | %(message)-10s | {robbot} | %(funcName)-20s ',
             #format='%(asctime)s | %(levelname)-8s | %(message)s | RIGO | %(funcName)-20s ',
@@ -46,9 +51,9 @@ class Reutilizables:
         )
         
         self.logger = logging.getLogger(__name__)
-        #self.logger.info("=" * 80)
-        self.logger.info("Sistema de logging inicializado")
-        #self.logger.info("=" * 80)
+        self.logger.debug("=" * 80)
+        self.logger.debug("Sistema de logging inicializado")
+        self.logger.debug("=" * 80)
     
     def crear_carpetas(self):
         """Crea todas las carpetas necesarias para el proyecto"""
@@ -65,7 +70,7 @@ class Reutilizables:
             for nombre, carpeta in carpetas.items():
                 if not carpeta.exists():
                     carpeta.mkdir(parents=True, exist_ok=True)
-                    self.logger.info(f"✓ Carpeta creada: {nombre} -> {carpeta}")
+                    self.logger.debug(f" Carpeta creada: {nombre} -> {carpeta}")
                 else:
                     self.logger.debug(f"Carpeta ya existe: {nombre} -> {carpeta}")
             
@@ -85,7 +90,7 @@ class Reutilizables:
         elif tipo == 'ERROR':
             self.logger.error(mensaje)
         elif tipo == 'DEBUG':
-            self.logger.debug(mensaje)
+            self.logger.info(mensaje)
     
     def limpiar_carpeta_temp(self):
         """Limpia archivos temporales"""
@@ -107,7 +112,7 @@ class Reutilizables:
         """Valida si un archivo existe"""
         archivo = Path(ruta_archivo)
         if archivo.exists():
-            self.logger.debug(f"Archivo encontrado: {archivo.name}")
+            self.logger.info(f"Archivo encontrado: {archivo.name}")
             return True
         else:
             self.logger.warning(f"Archivo NO encontrado: {archivo}")
@@ -126,24 +131,54 @@ class Reutilizables:
         return self.path_temp / nombre_archivo
     
     def cargar_configuracion():
+        """Carga parámetros desde la base de datos en un diccionario """
+        import logging
+        logger = logging.getLogger(__name__)
+        
         init_config()
-        print("In_config cargado:", in_config("PathProyecto"))
-        print("Configuracion global iniciada")
+        logger.info("In_config cargado:", in_config("PathProyecto"))
+        #self.logger.info("Configuracion global iniciada")
     def cargarParametros():
         """Carga parámetros desde el archivo de configuración"""
-        # try : 
- 
-        #     # TicketInsumoRepo.crearPCTicketInsumo( estado=0, observaciones= "Cargue de insumo")
-        #     # rutaParametros = os.path.join(inConfig("PathTemp"),"EnvioCorreos.xlsx")
-        #     # ExcelService.ejecutarBulkDesdeExcel(rutaParametros, sheet="ALL")
-        #     #TicketInsumoRepo.crearPCTicketInsumo( estado=100, observaciones= "Cargue de insumo")
-        # except Exception as e: 
-        #     #TicketInsumoRepo.crearPCTicketInsumo( error= 99, observaciones="Carge de insumo")
-        #     print("Error al cargar insumo Despliegue HU00 envio correos")
-        #     traceback.print_exc()
+        import logging
+        logger = logging.getLogger(__name__)
+        db = Database()
+        engine = db.get_engine()
+    
+        # 1. Ruta del archivo (Asegúrate de tenerla en tu config)
+        ruta_excel = rf"{in_config("PathParametrosRIGO")}"
+        esquema_destino = "PagoArriendos"
+
+        try:
+            # 2. Leer TODAS las hojas a la vez (sheet_name=None devuelve un dict)
+            dict_hojas = pd.read_excel(ruta_excel, sheet_name=None)
+            
+            logger.info(f"--- Iniciando despliegue de parámetros desde {ruta_excel} ---")
+
+            for nombre_hoja, df in dict_hojas.items():
+                # Limpiar nombres de columnas (quitar espacios, puntos, etc.)
+                df.columns = [col.strip().replace(' ', '_') for col in df.columns]
+                
+                # 3. Cargar a la base de datos, El nombre de la tabla será el mismo que el de la hoja
+                df.to_sql(
+                    name=nombre_hoja, 
+                    con=engine, 
+                    schema=esquema_destino, 
+                    if_exists='replace', # Reemplaza la tabla en cada despliegue # Stev: IMPORTANTE! remplaza toda la tabla con registros nuevos
+                    index=False
+                )
+                
+                logger.info(f" Tabla [{esquema_destino}].[{nombre_hoja}] cargada exitosamente ({len(df)} registros).")
+
+            logger.info("--- Proceso de despliegue finalizado con éxito ---")
+
+        except Exception as e:
+            logger.exception(f" Error critico durante el despliegue: {str(e)}")
+
+
 
 Reutilizables.cargar_configuracion()
-
+Reutilizables.cargarParametros()
 
 # Inicializar ambiente al importar
 ambiente = Reutilizables(
