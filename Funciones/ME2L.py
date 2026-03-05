@@ -17,6 +17,7 @@ class TransaccionME2L:
     def buscar_oc_activa(self, nit_proveedor):
         """Busca el primer número de Orden de Compra pendiente en ME2L"""
         try:
+            self.sap.abrir_transaccion("/n")
             self.sap.abrir_transaccion("ME2L")
             
             # Filtros de búsqueda

@@ -83,7 +83,7 @@ class HU07_ClasificarOC:
                         anexo_status = "No corresponde"
 
                         # 4. Cargar Anexo si está liberada
-                        if es_liberada:
+                        if es_liberada or "*":
                             ruta_pdf = r"\\192.168.50.169\RPA_RIGO_GestionPagodeArrendamientos\Insumo\Anexos\Prueba.txt"
                             exito_carga = cargar_archivo_gos(self.sesion, oc_numero, ruta_pdf, self.logger)
                             anexo_status = "Cargado Exitosamente" if exito_carga else "Error en Carga"

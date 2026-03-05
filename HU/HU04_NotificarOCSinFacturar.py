@@ -7,23 +7,24 @@ from Funciones.DatosHU04 import consultar_datos_hu04
 from Funciones.ConexionSAP import ConexionSAP
 from Config.Settings import SAP_CONFIG
 from Config.init_config import in_config
-
+from pathlib import Path
 class HU04_Auditoria:
     """
     Revisa existencia de Facturas y genera un informe 
     """
     def __init__(self):
         self.sap = ConexionSAP(
-            SAP_CONFIG.get('SAP_USUARIO'),
-            SAP_CONFIG.get('SAP_PASSWORD'),
+            SAP_CONFIG.get('user'),
+            SAP_CONFIG.get('password'),
             in_config('SapMandante'),
             in_config('SapIdioma'),
             in_config('SapRutaLogon'),
             in_config('SapSistema')
         )
         self.sesion = None
-        self.ruta_input = r"\\192.168.50.169\RPA_RIGO_GestionPagodeArrendamientos\Temp\HU07"
-        self.ruta_output = r"\\192.168.50.169\RPA_RIGO_GestionPagodeArrendamientos\Resultados\Reportes_HU04"
+        self.rutaTemp=Path(in_config('PathTemp'))
+        self.ruta_input = Path(rf"{self.rutaTemp}\HU07")
+        self.ruta_output = Path(rf"{self.rutaTemp}"+"\HU04")
 
     def buscar_ultimo_reporte_hu07(self):
         """Busca el archivo más reciente de la HU07 usando comodines."""
@@ -85,17 +86,23 @@ class HU04_Auditoria:
         self.guardar_informe(resultados_auditoria)
 
     def guardar_informe(self, datos):
-        if not datos: return
-        df_final = pd.DataFrame(datos)
-        
-        if not os.path.exists(self.ruta_output):
-            os.makedirs(self.ruta_output)
+
+        try:
+            if not datos:
+                df_final = pd.DataFrame([{"Mensaje":"No se encontraron órdenes para auditar"}])
+            else:
+                df_final = pd.DataFrame(datos)
             
-        fecha_hora = datetime.now().strftime('%Y%m%d_%H%M')
-        nombre = f"Informe_Auditoria_Facturacion_{fecha_hora}.xlsx"
-        ruta_completa = os.path.join(self.ruta_output, nombre)
-        
-        df_final.to_excel(ruta_completa, index=False)
-        print(f"\n[!] PROCESO FINALIZADO. Reporte en: {nombre}")
+            if not os.path.exists(self.ruta_output):
+                os.makedirs(self.ruta_output)
+                
+            fecha_hora = datetime.now().strftime('%Y%m%d')
+            nombre = f"Informe_Auditoria_Facturacion_{fecha_hora}.xlsx"
+            ruta_completa = os.path.join(self.ruta_output, nombre)
+            
+            df_final.to_excel(ruta_completa, index=False)
+            print(f"\n[!] PROCESO FINALIZADO. Reporte en: {ruta_completa}")
+        except Exception as e:
+            print(e)
 
 # --- PUNTO DE ENTRADA ---

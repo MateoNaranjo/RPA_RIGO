@@ -36,7 +36,8 @@ class TransaccionMIGO:
                 self.logger.error(f"No se pudo marcar el checkbox de arriendo: {e}")
 
             # 5. CONTABILIZAR (F11)
-            self.sesion.findById("wnd[0]").sendVKey(11)
+           
+            self.sesion.findById("wnd[0]/tbar[0]/btn[11]").press()
             time.sleep(4)
 
             # 6. Resultado final

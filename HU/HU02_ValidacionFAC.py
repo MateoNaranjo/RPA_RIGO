@@ -7,19 +7,23 @@ from Funciones.ConexionSAP import ConexionSAP
 from Funciones.DatosHU04 import consultar_datos_hu04 # Reutilizamos la conexión
 from Config.Settings import SAP_CONFIG
 from Config.init_config import in_config
+from pathlib import Path
 
 class HU02_VerificacionDiaria:
     def __init__(self):
         self.sap = ConexionSAP(
-            SAP_CONFIG.get('SAP_USUARIO'),
-            SAP_CONFIG.get('SAP_PASSWORD'),
+            SAP_CONFIG.get('user'),
+            SAP_CONFIG.get('password'),
             in_config('SapMandante'),
             in_config('SapIdioma'),
             in_config('SapRutaLogon'),
             in_config('SapSistema')
         )
-        self.ruta_input = r"\\192.168.50.169\RPA_RIGO_GestionPagodeArrendamientos\Resultados"
-        self.ruta_output = r"\\192.168.50.169\RPA_RIGO_GestionPagodeArrendamientos\Resultados\Reportes_HU02"
+
+        self.rutaTemp=in_config('PathTemp')
+        self.ruta_input=Path(rf"{self.rutaTemp}"+"\HU07")
+        #self.ruta_input = r"\\192.168.50.169\RPA_RIGO_GestionPagodeArrendamientos\Temp\HU07"
+        self.ruta_output = Path(rf"{self.rutaTemp}"+"HU02")
 
     def ejecutar(self):
         print(">>> Iniciando HU02: Verificación Diaria de Facturación...")
@@ -27,7 +31,7 @@ class HU02_VerificacionDiaria:
         if not sesion: return
 
         # 1. Buscar último reporte HU07
-        archivos = glob.glob(os.path.join(self.ruta_input, "Reporte_Gestion_HU07_*.xlsx"))
+        archivos = glob.glob(os.path.join(self.ruta_input, "Reporte_HU07*.xlsx"))
         if not archivos:
             print("[-] No se encontró insumo HU07.")
             return
@@ -80,7 +84,7 @@ class HU02_VerificacionDiaria:
         if not datos: return
         df_final = pd.DataFrame(datos)
         os.makedirs(self.ruta_output, exist_ok=True)
-        nombre = f"HU02_Control_Facturacion_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+        nombre = f"HU02_Control_Facturacion_{datetime.now().strftime('%Y%m%d')}.xlsx"
         df_final.to_excel(os.path.join(self.ruta_output, nombre), index=False)
         print(f">>> HU02 Finalizada. Reporte generado: {nombre}")
 

@@ -14,15 +14,16 @@ from Funciones.DescargarXML import login_colsubsidio, realizar_consulta, descarg
 class Facturas:
     def __init__(self):
         self.sap=ConexionSAP(
-            SAP_CONFIG.get('SAP_USUARIO'),
-            SAP_CONFIG.get('SAP_PASSWORD'),
-            in_config('SAP_CLIENTE'),
-            in_config('SAP_IDIOMA'),
-            in_config('SAP_PATH'),
-            in_config('SAP_SISTEMA')
+            SAP_CONFIG.get('user'),
+            SAP_CONFIG.get('password'),
+            in_config('SapMandante'),
+            in_config('SapIdioma'),
+            in_config('SapRutaLogon'),
+            in_config('SapSistema')
         )
         self.sesion = None
-
+        self.consultaSAP=None
+        self.descarga=None
         self.pathXML=Path(in_config('PathXML'))
 
         self.rutaTemporal=in_config('PathTemp')
@@ -45,6 +46,14 @@ class Facturas:
     
     def obtener_documentos_oc(self, columna, nit):
         query=f"SELECT {columna} FROM PagoArriendos.ReporteHU07 WHERE NIT = '{nit}'"
+        with Database.get_connection() as conn:
+            cursor =conn.cursor()
+            cursor.execute(query)
+            resultados =cursor.fetchall()
+            return [row[0] for row in resultados]
+        
+    def obtener_documentos_oc_comparar(self, columna):
+        query=f"SELECT {columna} FROM PagoArriendos.ReporteHU07 WHERE NIT != 'No existe / Error'"
         with Database.get_connection() as conn:
             cursor =conn.cursor()
             cursor.execute(query)
@@ -99,26 +108,39 @@ class Facturas:
         except Exception as e:
             print(f"Error al ingresar al aplicativo cadena: {e}")
 
-    def comparar_XML_SAP(self):
+    def comparar_XML_SAP(self, oc, contador):
         self.sap.iniciar_sesion_sap()
-        xml_path = r"C:\ProgramData\RIGO\Insumo\ad090063145002525021701C7.xml"
-        datos = LectorFacturaXML(xml_path).obtener_datos()
-        
-        me2l = TransaccionME2L(self.sap)
-        oc = me2l.buscar_oc_activa(datos['nit'])
+        nit=self.documentos = self.obtener_documentos('NIT')
+        try:
+            xml_path = rf"{self.pathXML}\{oc}.xml"
+            datos = LectorFacturaXML(xml_path).obtener_datos()
+            
+            me2l = TransaccionME2L(self.sap)
+            oc = me2l.buscar_oc_activa(nit[contador])
 
-        if oc:
+            
             migo = TransaccionMIGO(self.sap)
             migo.contabilizar_entrada(oc, datos['factura'])
-
+        except Exception as e:
+            print(e)
 
 
     def ejecutar(self):
-       print("RUTAAAAAAAAAAAAAA", self.cadenaRuta)
-       self.descarga= Facturas.descargar_XML(self)
-       self.consultaSAP=Facturas.comparar_XML_SAP(self)
-       self.descarga
-       self.consultaSAP
+        print("RUTAAAAAAAAAAAAAA", self.cadenaRuta)
+        self.descarga = Facturas.descargar_XML(self)
+        oc = self.obtener_documentos_oc_comparar('OC')
+        
+        print(oc)
+        contador=0
+        if oc:  # solo si hay elementos
+            for i in oc:
+                print(i)
+                self.consultaSAP = Facturas.comparar_XML_SAP(self, i, contador)
+                contador+=1
+
+        # Evita acceder si no existe
+        if self.consultaSAP is not None:
+            print(self.consultaSAP)
 
 
         

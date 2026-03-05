@@ -2,6 +2,7 @@ import pandas as pd
 import os
 from datetime import datetime
 from Config.init_config import in_config
+from pathlib import Path
 
 class HU03_DiagnosticoCierre:
     def __init__(self):
@@ -10,6 +11,8 @@ class HU03_DiagnosticoCierre:
         o externo (Falta Factura del proveedor).
         """
         self.ruta_reportes = in_config("PathResultado")
+        self.rutaTemp = in_config('PathTemp')
+        self.rutaHU04=Path(rf"{self.rutaTemp}"+"\HU04")
 
     def ejecutar_diagnostico(self, resultado_sap):
         """

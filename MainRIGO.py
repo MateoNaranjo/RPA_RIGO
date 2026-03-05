@@ -8,7 +8,30 @@ from HU.HU03_OCSinFactura import HU03_DiagnosticoCierre
 from HU.HU02_ValidacionFAC import HU02_VerificacionDiaria
 from HU.HU05_GestionAnexos import HU05_CargueSQL
 from HU.HU01_EgresosCuentasPorPagar import Facturas
+from datetime import datetime
 
+import os
+
+def cerrar_sap():
+    try:
+        # cubrir variantes de SAP GUI
+        for proceso in ["saplogon.exe", "saplgpad.exe", "sapgui.exe"]:
+            os.system(f"taskkill /f /im {proceso}")
+        print("[+] Intento de cierre de SAP completado.")
+    except Exception as e:
+        print(f"[-] Error al cerrar SAP: {e}")
+
+
+def cerrar_chrome():
+    try:
+        os.system("taskkill /f /im chrome.exe")
+        print("[+] Chrome cerrado correctamente.")
+    except Exception as e:
+        print(f"[-] Error al cerrar Chrome: {e}")
+
+
+cerrarSAP=cerrar_sap()
+cerrarGoogle=cerrar_chrome()
 
 if __name__ == "__main__":
 
@@ -30,21 +53,27 @@ if __name__ == "__main__":
     """
     pruebaExcel=HU07_ClasificarOC()
     pruebaExcel.ejecutar()
-
-    #ejecucionHu01 = Facturas()
-    #ejecucionHu01.ejecutar()
-
-    #ejecucionHu04=HU04_Auditoria()
-    #ejecucionHu04.ejecutar()
+    cerrar_sap()
 
 
-    # nombre_archivo=r"Informe_Auditoria_Facturacion_20260116_0942.xlsx"
+    ejecucionHu01 = Facturas()
+    ejecucionHu01.ejecutar()
+    cerrar_sap()
+    cerrar_chrome()
 
-    # ejecucionHu03=HU03_DiagnosticoCierre()
-    # ejecucionHu03.procesar_desde_excel(nombre_archivo)
+    ejecucionHu04=HU04_Auditoria()
+    ejecucionHu04.ejecutar()
+    cerrar_sap()
 
-    # ejecucionHu02=HU02_VerificacionDiaria()
-    # ejecucionHu02.ejecutar()
+    fecha_hora = datetime.now().strftime('%Y%m%d')
+    nombre_archivo=rf"Informe_Auditoria_Facturacion_{fecha_hora}.xlsx"
+
+    ejecucionHu03=HU03_DiagnosticoCierre()
+    ejecucionHu03.procesar_desde_excel(nombre_archivo)
+
+    ejecucionHu02=HU02_VerificacionDiaria()
+    ejecucionHu02.ejecutar()
+    cerrar_sap()
     
     # ruta = r"\\192.168.50.169\RPA_RIGO_GestionPagodeArrendamientos\Resultados\Reporte_HU03_Cierre_20260116_1306.xlsx"
     # HU05_CargueSQL.ejecutar_cargue_desde_excel(ruta)

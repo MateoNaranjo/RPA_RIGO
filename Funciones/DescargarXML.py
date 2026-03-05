@@ -9,6 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from datetime import date 
 from pathlib import Path
+from Config.init_config import in_config
 import shutil
 import time
 import os
@@ -21,7 +22,7 @@ def login_colsubsidio(usuario, contraseña, ruta):
     chrome_options.add_experimental_option("detach", True)
     
     prefs = {
-        "download.default_directory": os.getcwd(),
+        "download.default_directory": in_config('PathXML'),
         "download.prompt_for_download": False,
         "download.directory_upgrade": True,
         "safebrowsing.enabled": True, 
