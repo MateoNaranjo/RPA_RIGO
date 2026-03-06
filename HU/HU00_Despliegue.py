@@ -157,7 +157,8 @@ class Reutilizables:
 
             for nombre_hoja, df in dict_hojas.items():
                 # Limpiar nombres de columnas (quitar espacios, puntos, etc.)
-                df.columns = [col.strip().replace(' ', '_') for col in df.columns]
+                #df.columns = [col.strip().replace(' ', '_') for col in df.columns]
+                df.columns = [col.strip() for col in df.columns]
                 
                 # 3. Cargar a la base de datos, El nombre de la tabla será el mismo que el de la hoja
                 df.to_sql(

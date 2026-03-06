@@ -14,6 +14,7 @@ import re
 import subprocess
 import time
 import os
+import pyperclip
 from Funciones.EmailSender import EnviarCorreoPersonalizado
 from Funciones.EscribirLog import WriteLog
 import pyautogui
@@ -21,728 +22,14 @@ from pyautogui import ImageNotFoundException
 from Funciones.Login import ObtenerSesionActiva
 from typing import List, Literal, Optional
 from Config.init_config import in_config
+from Config.Database import Database
 import logging
 logger = logging.getLogger(__name__)
+import datetime
 
-from datetime import datetime, timedelta
 import calendar
 
-class SapTextEditor:
-    """
-    Wrapper para el editor de textos SAP (GuiShell - SAPLMMTE).
-    Permite leer y modificar texto línea por línea de forma segura.
-    #Stev: se prueban varios metodos, pero la mejor opcion es tomar todo el texto y luego setearlo todo de nuevo desde la linea 0, no es recomendable buscar una linea especifica
-    # usando EditorTxt.SetUnprotectedTextPart(0,".")
-    """
 
-    def __init__(self, session, editor_id):
-        """
-        Args:
-            session: sesión activa SAP GUI
-            editor_id (str): ID completo del editor (hasta /shell)
-        """
-        self.session = session
-        self.editor_id = editor_id
-        self.shell = self._get_shell()
-
-    def _get_shell(self):
-        shell = self.session.findById(self.editor_id)
-        if shell.Type != "GuiShell":
-            raise Exception("El objeto encontrado no es un GuiShell (Text Editor SAP)")
-        return shell
-
-    # ------------------------------------------------------------------
-    # LECTURA
-    # ------------------------------------------------------------------
-
-    def get_line(self, index):
-        """Obtiene el texto completo de una línea."""
-        try:
-            return self.shell.GetLineText(index)
-        except Exception:
-            return None
-
-    def get_all_text(self, max_lines=100):
-        """
-        Obtiene todo el texto del editor SAP sin saltos de línea finales
-        ni líneas vacías generadas por el control.
-        """
-        lines = []
-
-
-        for i in range(max_lines):
-            try:
-                line = self.get_line(i)
-
-                if line is None:
-                    break
-
-                # Limpia caracteres invisibles pero conserva el contenido
-                clean_line = line.rstrip()
-                lines.append(clean_line)
-
-            except Exception:
-                break
-
-        # Elimina líneas vacías finales
-        while lines and lines[-1] == "":
-            lines.pop()
-
-        return "\n".join(lines)
-
-
-
-
-    # ------------------------------------------------------------------
-    # ESCRITURA
-    # ------------------------------------------------------------------
-
-    def set_editable_line(self, index, new_text):
-        """Modifica únicamente la parte editable de una línea."""
-        try:
-            self.shell.SetUnprotectedTextPart(index, new_text)
-            return True
-        except Exception:
-            return False
-
-    def replace_in_text(self, texto: str, replacements: dict):
-        """
-        Reemplaza textos sobre un string completo, evitando líneas vacías iniciales
-        y agregando un mensaje final con el total de cambios.
-
-        Args:
-            texto (str): texto original del editor SAP
-            replacements (dict): {"SAA": "R3", ...}
-
-        Returns:
-            nuevo_texto (str)
-            cambios (int)
-        #Stev: cambia el texto segun un diccionario de reemplazos y retorna el texto modificado y la cantidad de cambios realizados
-        """
-        
-
-        if not texto:
-            return texto, 0
-
-        # 1. Eliminar SOLO saltos de línea iniciales
-        texto = texto.lstrip("\n")
-        lineas = texto.splitlines()
-
-        nuevas_lineas = []
-        cambios = 0
-        CambioExacto = "Stev: No se realizaron cambios exactos" # cambio exacto para el log
-        
-
-        for linea in lineas:
-            nueva = linea
-
-            for buscar, reemplazar in replacements.items():
-                # Reemplazo exacto por línea
-                if linea.strip() == buscar:
-                    nueva = reemplazar
-                    # todo: hacer el apend a la lista para el informe 
-                    CambioExacto = (f"[CAMBIO EXACTO] '{linea}' -> '{reemplazar}'")
-                else:
-                    nueva = nueva.replace(buscar, reemplazar)
-
-            if nueva != linea:
-                cambios += 1
-
-            nuevas_lineas.append(nueva)
-
-        # 2. Agregar mensaje final si hubo cambios
-        if cambios > 0:
-            nuevas_lineas.append("")
-            nuevas_lineas.append(
-                f"TEXTO MODIFICADO AUTOMÁTICAMENTE POR BOT RPA – CAMBIOS APLICADOS: {cambios}"
-            )
-
-        return "\n".join(nuevas_lineas), cambios, CambioExacto
-
-# fin class SapTextEditor:
-# fin utilidades
-
-# ===============================================================================================
-# Funciones para obtener el ID de los objetos dinamicamnete dependiento del objeto padre
-# devuelve el valor de la propiedad o ejecuta la accion deseada
-# ===============================================================================================
-
-def set_sap_table_scroll(session, table_id_part, position):
-    """
-    Busca una tabla por su ID técnico y ajusta su scroll vertical.
-    
-    Args:
-        session: Sesión activa.
-        table_id_part (str): Parte única del ID de la tabla (ej: 'TC_1211').
-        position (int): Posición a la que queremos mover el scroll.
-    """
-    usr = session.findById("wnd[0]/usr")
-    
-    def buscar_tabla(obj):
-        try:
-            # Buscamos que sea una tabla y que el ID contenga el nombre técnico
-            if obj.Type == "GuiTableControl" and table_id_part in obj.Id:
-                return obj
-            
-            for child in obj.Children:
-                res = buscar_tabla(child)
-                if res: return res
-        except Exception:
-            pass
-        return None
-
-    tabla = buscar_tabla(usr)
-    
-    if tabla:
-        # Ajustamos la posición del scrollbar
-        tabla.verticalScrollbar.position = position
-    else:
-        raise Exception(f"No se encontró la tabla con ID que contenga: {table_id_part}")
-
-def press_GuiButton(session, button_id):
-    """
-    Presiona un botón (GuiButton) en SAP GUI a partir de su ID lógico.
-
-    Args:
-        session: sesión SAP activa
-        button_id (str): ID lógico del botón (ej: 'AUTOTEXT002')
-
-    Ejemplo:
-        press_GuiButton(session, "AUTOTEXT002")
-    """
-
-    if not button_id:
-        raise ValueError("button_id es obligatorio")
-
-    usr = session.findById("wnd[0]/usr")
-    target_suffix = f"btn%#{button_id}"
-
-    def buscar_boton(obj):
-        try:
-            if obj.Type == "GuiButton" and obj.Id.endswith(target_suffix):
-                return obj
-
-            for child in obj.Children:
-                res = buscar_boton(child)
-                if res:
-                    return res
-        except Exception:
-            pass
-        return None
-
-    boton = buscar_boton(usr)
-
-    if not boton:
-        raise Exception(f"No se encontró GuiButton con ID lógico: {button_id}")
-
-    # Press() es seguro incluso si el botón ya fue usado
-    boton.Press()
-
-def SetGuiComboBoxkey(session, campo_id, key_value="ZRCR"):
-    """
-    Selecciona un valor en un GuiComboBox de SAP GUI usando un ID lógico.
-
-    Args:
-        session: sesión SAP activa
-        campo_id (str): identificador lógico del campo (ej: 'TOPLINE-BSART')
-        key_value (str): clave a seleccionar en el combo (ej: 'ZRCR')
-
-    Raises:
-        Exception si no se encuentra el GuiComboBox
-    Ejemplo de uso:
-        SetGuiComboBoxkey(session, "TOPLINE-BSART", "ZRCR")
-    """
-
-    if not campo_id:
-        raise ValueError("campo_id es obligatorio")
-
-    usr = session.findById("wnd[0]/usr")
-
-    def buscar_combobox(obj):
-        try:
-            if (
-                obj.Type == "GuiComboBox"
-                and campo_id in obj.Id
-            ):
-                return obj
-
-            for child in obj.Children:
-                res = buscar_combobox(child)
-                if res:
-                    return res
-        except Exception:
-            pass
-        return None
-
-    combo = buscar_combobox(usr)
-
-    if not combo:
-        raise Exception(f"No se encontró GuiComboBox con ID lógico: {campo_id}")
-
-    # Selección por Key (forma correcta y estable)
-    combo.Key = key_value
-
-def set_GuiCabeceraTextField_text(session, campo_id, valor):
-    """
-    Setea un texto en un GuiCTextField (ME21N / cabecera)
-    usando el identificador lógico SAP (ej: 'EKORG', 'EKGRP').
-
-    Args:
-        session: sesión activa de SAP GUI
-        campo_id (str): ID lógico del campo (ej: 'EKORG')
-        valor (str): texto a insertar
-
-    Raises:
-        ValueError: si los argumentos son inválidos
-        Exception: si no se encuentra el campo
-    """
-
-    if not campo_id:
-        raise ValueError("campo_id es obligatorio (ej: 'EKORG')")
-
-    if valor is None:
-        raise ValueError("valor no puede ser None")
-
-    usr = session.findById("wnd[0]/usr")
-    target_suffix = f"-{campo_id}"
-
-    def buscar_ctextfield(obj):
-        try:
-            if (
-                obj.Type == "GuiCTextField"
-                and obj.Id.endswith(target_suffix)
-            ):
-                return obj
-
-            for child in obj.Children:
-                res = buscar_ctextfield(child)
-                if res:
-                    return res
-        except Exception:
-            pass
-        return None
-
-    ctext = buscar_ctextfield(usr)
-
-    if not ctext:
-        raise Exception(f"No se encontró GuiCTextField con ID lógico: {campo_id}")
-
-    # En SAP es buena práctica asegurar foco antes de escribir
-    try:
-        ctext.SetFocus()
-    except Exception:
-        pass
-
-    ctext.Text = str(valor)
-
-
-def get_GuiCabeceraTextField_text(session, campo_id):
-    """
-    Obtiene el texto (.Text.strip()) de un GuiCTextField en ME21N
-    a partir del identificador lógico SAP (ej: 'EKORG', 'EKGRP').
-
-    Args:
-        session: sesión activa de SAP GUI
-        campo_id (str): identificador lógico del campo SAP (ej: 'EKORG')
-
-    Returns:
-        str: texto del campo (strip)
-
-    Raises:
-        ValueError: si el argumento es inválido
-        Exception: si no se encuentra el GuiCTextField
-    """
-
-    if not campo_id:
-        raise ValueError("campo_id es obligatorio (ej: 'EKORG')")
-
-    usr = session.findById("wnd[0]/usr")
-    target_suffix = f"-{campo_id}"
-
-    def buscar_ctextfield(obj):
-        try:
-            if (
-                obj.Type == "GuiCTextField"
-                and obj.Id.endswith(target_suffix)
-            ):
-                return obj
-
-            for child in obj.Children:
-                res = buscar_ctextfield(child)
-                if res:
-                    return res
-        except Exception:
-            pass
-        return None
-
-    ctext = buscar_ctextfield(usr)
-
-    if not ctext:
-        raise Exception(f"No se encontró GuiCTextField con ID lógico: {campo_id}")
-
-    return ctext.Text.strip()
-
-#for fila in range(item):
-#   precio = get_GuiTextField_text(session, f"NETPR[10,{fila}]")
-
-def get_GuiTextField_text(session, campo_posicion):
-    """
-    Obtiene el texto de un GuiTextField dentro de un TableControl SAP
-    usando una posición lógica (ej: 'NETPR[10,0]').
-
-    Args:
-        session: sesión SAP activa
-        campo_posicion (str): campo con posición SAP (ej: 'NETPR[10,0]')
-
-    Returns:
-        str: texto del campo
-
-    Raises:
-        Exception si no se encuentra el objeto
-    """
-
-    if not campo_posicion:
-        raise ValueError("campo_posicion es obligatorio")
-
-    # Parsear NETPR[10,0]
-    match = re.match(r"(.+)\[(\d+),(\d+)\]", campo_posicion)
-    if not match:
-        raise ValueError("Formato inválido. Use: NETPR[10,0]")
-
-    campo, col, fila = match.groups()
-    col = int(col)
-    fila = int(fila)
-
-    usr = session.findById("wnd[0]/usr")
-
-    def buscar_textfield(obj):
-        try:
-            if (
-                obj.Type == "GuiTextField"
-                and campo in obj.Id
-                and obj.Id.endswith(f"[{col},{fila}]")
-            ):
-                return obj
-
-            for child in obj.Children:
-                res = buscar_textfield(child)
-                if res:
-                    return res
-        except Exception:
-            pass
-        return None
-
-    txt = buscar_textfield(usr)
-
-    if not txt:
-        raise Exception(f"No se encontró GuiTextField: {campo_posicion}")
-
-    return txt.Text.strip()
-
-def set_GuiTextField_text(session, campo_posicion, valor):
-    """
-    Setea el texto de un GuiTextField dentro de un TableControl SAP
-    usando posición lógica (ej: 'NETPR[10,0]' o 'MENGE[6,0]').
-    Compatible con M21N (MEPO1211).
-    """
-
-    if not campo_posicion:
-        raise ValueError("campo_posicion es obligatorio")
-
-    if valor is None:
-        valor = ""
-
-    # Parseo CAMPO[col,fila]
-    match = re.fullmatch(r"([A-Z0-9_]+)\[(\d+),(\d+)\]", campo_posicion.upper())
-    if not match:
-        raise ValueError("Formato inválido. Use: NETPR[10,0] o MENGE[6,0]")
-
-    campo, col, fila = match.groups()
-    col = int(col)
-    fila = int(fila)
-
-    usr = session.findById("wnd[0]/usr")
-    
-
-    objetivo = f"-{campo}[{col},{fila}]"
-
-    def buscar_textfield(obj):
-        try:
-            if (
-                obj.Type == "GuiTextField"
-                and objetivo in obj.Id
-            ):
-                return obj
-
-            for child in obj.Children:
-                res = buscar_textfield(child)
-                if res:
-                    return res
-        except Exception:
-            pass
-        return None
-
-    txt = buscar_textfield(usr)
-
-    if not txt:
-        raise Exception(f"No se encontró GuiTextField SAP: {campo}[{col},{fila}]")
-
-    # Seteo seguro (SAP-friendly)
-    txt.SetFocus()
-    txt.Text = str(valor)
-    txt.CaretPosition = len(txt.Text)
-    session.findById("wnd[0]").sendVKey(0)
-
-def set_GuiTextField_Ventana1_text(session, campo_posicion, valor):
-    """
-    Setea el texto de un GuiTextField dentro de un TableControl SAP
-    usando posición lógica (ej: 'NETPR[10,0]' o 'MENGE[6,0]').
-    Compatible con M21N (MEPO1211).
-    """
-
-    if not campo_posicion:
-        raise ValueError("campo_posicion es obligatorio")
-
-    if valor is None:
-        valor = ""
-
-    # Parseo CAMPO[col,fila]
-    match = re.fullmatch(r"([A-Z0-9_]+)\[(\d+),(\d+)\]", campo_posicion.upper())
-    if not match:
-        raise ValueError("Formato inválido. Use: NETPR[10,0] o MENGE[6,0]")
-
-    campo, col, fila = match.groups()
-    col = int(col)
-    fila = int(fila)
-    #ventana 1
-    usr = session.findById("wnd[1]/usr")
-    
-
-    objetivo = f"-{campo}[{col},{fila}]"
-
-    def buscar_textfield(obj):
-        try:
-            if (
-                obj.Type == "GuiCTextField"
-                and objetivo in obj.Id
-            ):
-                return obj
-
-            for child in obj.Children:
-                res = buscar_textfield(child)
-                if res:
-                    return res
-        except Exception:
-            pass
-        return None
-
-    txt = buscar_textfield(usr)
-
-    if not txt:
-        raise Exception(f"No se encontró GuiTextField SAP: {campo}[{col},{fila}]")
-
-    # Seteo seguro (SAP-friendly)
-    txt.SetFocus()
-    txt.Text = str(valor)
-    txt.CaretPosition = len(txt.Text)
-    session.findById("wnd[1]").sendVKey(0)
-
-def ventana_abierta(session, titulo_parcial):
-    """
-    Verifica si existe una ventana abierta cuyo título contenga el texto indicado.
-
-    Args:
-        session: sesión activa SAP GUI
-        titulo_parcial (str): texto a buscar en el título (case-insensitive)
-
-    Returns:
-        bool
-    """
-
-    titulo_parcial = titulo_parcial.lower()
-
-    for wnd in session.Children:
-        try:
-            if titulo_parcial in wnd.Text.lower():
-                return True
-        except Exception:
-            pass
-
-    return False
-
-def SelectGuiTab(session, tab_id):
-    """
-    Selecciona una pestaña (GuiTab) del detalle de posición en ME21N.
-    Args:
-        session: sesión activa de SAP GUI
-        tab_id (str): ID lógico de la pestaña (ej: 'TABIDT14')
-    Ejemplos:
-        SelectGuiTab(session, "TABIDT14")  # Textos
-        SelectGuiTab(session, "TABIDT05")  # Entrega
-    """
-
-    if not tab_id:
-        raise ValueError("tab_id es obligatorio")
-
-    usr = session.findById("wnd[0]/usr")
-    target_suffix = f"tabp{tab_id}"
-
-    def buscar_tab(obj):
-        try:
-            if obj.Type == "GuiTab" and obj.Id.endswith(target_suffix):
-                return obj
-            for child in obj.Children:
-                res = buscar_tab(child)
-                if res:
-                    return res
-        except Exception:
-            pass
-        return None
-
-    tab = buscar_tab(usr)
-
-    if not tab:
-        raise Exception(f"No se encontró la pestaña GuiTab con ID :{tab_id}")
-    # Select() es seguro incluso si ya está seleccionada
-    tab.Select()
-
-def boton_existe(session, id):
-    """
-    Verifica de forma segura si un objeto SAP existe a partir de su ID completo.
-
-    Args:
-        session: La sesión activa de SAP GUI.
-        id (str): El ID completo del objeto a verificar.
-
-    Returns:
-        bool: True si el objeto existe, False en caso contrario.
-    """
-    try:
-        session.findById(id)
-        return True
-    except:
-        return False
-
-def buscar_y_clickear(
-    ruta_imagen,
-    confidence=0.5,
-    intentos=20,
-    espera=0.5,
-    fail_silently=True,
-    log=True
-):
-    """
-    Busca una imagen en pantalla y hace click cuando la encuentra,
-    controlando el error si no aparece y permitiendo continuar el flujo.
-
-    Args:
-        ruta_imagen (str): Ruta de la imagen a buscar.
-        confidence (float): Nivel de confianza para el match (OpenCV).
-        intentos (int): Número máximo de intentos.
-        espera (float): Tiempo de espera entre intentos (segundos).
-        fail_silently (bool): Si True, no lanza excepción al fallar.
-        log (bool): Si True, muestra mensajes de estado.
-
-    Returns:
-        bool: True si se encontró e hizo click, False si no.
-    """
-    nombreTarea = "HU4_GeneracionOC"
-
-    for intento in range(1, intentos + 1):
-        try:
-            pos = pyautogui.locateCenterOnScreen(
-                ruta_imagen,
-                confidence=confidence
-            )
-
-            if pos:
-                pyautogui.click(pos)
-                #pyautogui.press("enter") # Descomentar si se quiere dar enter tras el click
-                if log:
-                    WriteLog(
-                        mensaje=f"Imagen encontrada y clickeada: {ruta_imagen}",
-                        estado="INFO",
-                        nombreTarea=nombreTarea,)
-                    #print(f"[INFO] Imagen encontrada y clickeada: {ruta_imagen}")
-                return True
-
-        except ImageNotFoundException:
-            # PyAutoGUI puede lanzar esta excepción en algunas versiones
-            #pyautogui.press("enter") # Descomentar si se quiere dar enter tras el click
-            pass
-
-        except Exception as e:
-            if log:
-                 WriteLog(
-                        mensaje=f"Error inesperado buscando imagen {ruta_imagen}: {e}",
-                        estado="ERROR",
-                        nombreTarea=nombreTarea,)
-                 #print(f"[ERROR] Error inesperado buscando imagen {ruta_imagen}: {e}")
-            if not fail_silently:
-                raise
-
-        time.sleep(espera)
-
-    if log:
-        WriteLog(
-            mensaje=f"Imagen no encontrada tras {intento} intentos: {ruta_imagen}",
-            estado="WARNING",
-            nombreTarea=nombreTarea,)
-        #print(f"[WARNING] Imagen no encontrada tras {intento} intentos: {ruta_imagen}")
-
-    if not fail_silently:
-        raise RuntimeError(f"No se encontró la imagen: {ruta_imagen}")
-
-    return False
-
-def clasificar_concepto(concepto: str) -> Literal["PRODUCTO", "SERVICIO"]: 
-    """
-    Clasifica un concepto como PRODUCTO o SERVICIO
-    usando reglas de negocio.
-    """
-
-    concepto_upper = concepto.upper()
-
-    # Palabras clave típicas de SERVICIO
-    palabras_servicio = [
-        "TRANSPORTE",
-        "ANIMADOR",
-        "LAVADO",
-        "COORDINADOR",
-        "SERVICIO",
-        "MANTENIMIENTO",
-        "INSTALACION",
-        "REPARACION",
-        "LIMPIEZA",
-        "ALQUILER",
-        "ARRENDAMIENTO",
-        "ASEO",
-        "REVISION",
-        "SOPORTE",
-        "CAPACITACION"
-    ]
-
-    if any(palabra in concepto_upper for palabra in palabras_servicio):
-        return "SERVICIO"
-    # Stev: añadir mas reglas si es necesario para producto por palabras clave
-    # Regla por descarte (objetos físicos)
-    return "PRODUCTO"
-
-def extraer_concepto(texto: str) -> Optional[str]:
-    """
-    Extrae el valor del campo 'POR CONCEPTO DE:'.
-    """
-    patron = re.compile(
-        r"POR\s+CONCEPTO\s+DE\s*:\s*(.+)",
-        re.IGNORECASE
-    )
-
-    for linea in texto.splitlines():
-        match = patron.search(linea)
-        if match:
-            return match.group(1).strip()
-
-    return None
 
 def obtener_correos(texto: str, dominio: Optional[str] = None) -> List[str]:
     """
@@ -904,7 +191,7 @@ def esperar_sap_listo(session, timeout=10):
 
     raise TimeoutError("SAP GUI no terminó de cargar (session.Busy)")
 
-def CambiarGrupoCompra(session):
+
     """
     Cambia el Grupo de Compras ('EKGRP') basado en la Organización de Compras ('EKORG') actual.
 
@@ -1334,42 +621,7 @@ def buscar_objeto_por_id_parcial(session, id_parcial):
 
     return buscar_recursivo(contenedor_principal)
 
-def obtener_importe_por_denominacion(session, nombre_buscado="imp.Saludable"):
-    # 1. Identificar la tabla y el scrollbar de forma dinámica
-    # Usando TC_1211 como ejemplo para la tabla de condiciones
-    tabla = buscar_objeto_por_id_parcial(session, "TC_1211") 
-    scrollbar = tabla.verticalScrollbar
-    
-    encontrado = False
-    fila_actual = 0
-    total_filas = scrollbar.maximum
-    visible_row_count = tabla.visibleRowCount
 
-    while scrollbar.position <= total_filas:
-        for i in range(visible_row_count):
-            try:
-                # Obtenemos el texto de la columna Denominación (VTEXT)
-                denominacion = get_GuiTextField_text(session, f"VTEXT[2,{i}]")
-                
-                if nombre_buscado.lower() in denominacion.lower():
-                    # Si coincide, capturamos el valor de la columna Importe (KBETR)
-                    # Nota: Debes verificar el índice de columna para Importe en tu SAP
-                    importe = get_GuiTextField_text(session, f"KBETR[3,{i}]")
-                    return importe
-            except Exception:
-                # Si falla una fila (ej: fila vacía al final), continuamos
-                continue
-        
-        # 2. Si no se encontró en las visibles, bajar el scroll
-        nueva_posicion = scrollbar.position + visible_row_count
-        if nueva_posicion > total_filas:
-            break # Ya llegamos al final
-            
-        scrollbar.position = nueva_posicion
-        # Importante: Pequeña espera para que SAP refresque los datos internos
-        time.sleep(0.5) 
-        
-    return None
 
 
 def ObtenerColumnasdf(ruta_archivo: str, ):
@@ -1380,48 +632,6 @@ def ObtenerColumnasdf(ruta_archivo: str, ):
     df= pd.read_csv(ruta_archivo, dtype=str,sep="|")
     columnas = df.columns.tolist()
     return columnas
-
-
-def get_importesCondiciones(session, impuesto_buscado="Imp. Saludable IBUE"):
-    """
-    Obtiene los importes de la pestaña condiciones en ME21N
-    segun un impuesto específico.
-    
-    Args:
-        session: Sesión activa de SAP GUI. 
-        impuesto_buscado (str): Impuesto a buscar.
-
-    Returns:
-        str: Importe del impuesto encontrado o None si no se encuentra.
-    
-    """
-
-    # Tomar impuesto Saludable en la pestaña de Condiciones 
-    SelectGuiTab(session, "TABIDT8")
-    bandera = True
-    # asegura que empieza en la posición 1 de la tabla de Condiciones
-    set_sap_table_scroll(session, "tblSAPLV69ATCTRL_KONDITIONEN", 1)
-
-    while (bandera == True):
-        try :
-            for i in range(20):  # Revisa las condiciones
-                impuestosCondiciones = get_GuiTextField_text(session, f"VTEXT[2,{i}]")
-                print(f"Impuesto en la pestaña de condiciones: {impuestosCondiciones}")
-                if impuestosCondiciones == impuesto_buscado: 
-                    print("Impuesto encontrado:", impuestosCondiciones)
-                    bandera=False
-                    return get_GuiTextField_text(session, f"KBETR[3,{i}]")  # Retorna el importe asociado
-                                        
-                elif impuestosCondiciones == "" :
-                    print("no encontrado:", impuestosCondiciones)
-                    bandera=False
-                    return None  # Salir si se encuentra una fila vacía
-                    
-        except Exception as e:
-            SelectGuiTab(session, "TABIDT8")
-            set_sap_table_scroll(session, "tblSAPLV69ATCTRL_KONDITIONEN", i)
-            print("Error al obtener los impuestos de las condiciones:", str(e))
-            #continue
 
 
 def obtener_ultimo_dia_habil_actual():
@@ -1443,7 +653,7 @@ def obtener_ultimo_dia_habil_actual():
     
     # Retroceder si es Sábado (5) o Domingo (6)
     while fecha.weekday() > 4:
-        fecha -= timedelta(days=1)
+        fecha -= datetime.timedelta(days=1)
         
     # 4. Formatear como DD.MM.YYYY
     return fecha.strftime('%d.%m.%Y')
@@ -1696,11 +906,134 @@ def validar_estrategias_sap(df_sap, df_excel):
 def impimmirdf(df: pd.DataFrame):
         
         print(type(df))
-        print("Columnas obtenidas del df de la base de datos:")
-        print(df.columns.tolist())
-        print("Columnas obtenidas del list(df):")
-        print(list(df))
+        # print("Columnas obtenidas del df de la base de datos:")
+        # print(df.columns.tolist())
+        # print("Columnas obtenidas del list(df):")
+        # print(list(df))
         print("Columnas obtenidas del df.head():")
         print(df.head())
-        print("Columnas obtenidas del  df.info()")
-        print(df.info())
+        # print("Columnas obtenidas del  df.info()")
+        # print(df.info())
+
+def fomatodf(df: pd.DataFrame):
+        """
+        darle formato a los data frame 
+        """
+        # Limpiar espacios en los nombres de las columnas
+        df.columns = [re.sub(r'\s+', ' ', str(col)).strip() for col in df.columns]
+ 
+        # Identificar y renombrar duplicados
+        cols = pd.Series(df.columns)
+        for i in cols[cols.duplicated()].unique():
+            cols[cols == i] = [f"{i}_{j}" if j != 0 else i for j in range(sum(cols == i))]
+        df.columns = cols # Ahora las columnas se llamarán "Nombre 1" (la primera) y "Nombre 1_1" (la segunda)
+     
+           
+        # Filtramos solo las columnas que existan en el DataFrame original #2
+        columnas_interes = ['Fecha doc.','Acreedor','Nombre 1','Creado','Estr.', 'Doc.compr.', 'Status Lib', 'Precio neto', ]
+        columnas_validas = [col for col in columnas_interes if col in df.columns]
+        df = df[columnas_validas].copy() # Aseguramos que solo trabajamos con las columnas que realmente existen en el DataFrame original
+        # Convertir 'Precio neto' a numérico, manejando comas y puntos
+        df['Precio neto'] = pd.to_numeric(df['Precio neto'].astype(str).str.replace('.', '', regex=False).str.replace(',', '.', regex=False),errors='coerce').fillna(0)
+
+        # Agregar la fecha y hora actual, Usamos format para que SQL lo reconozca como DATETIME fácilmente
+        df['FechaActualizacion'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        # Agregar el estado de notificación inicial, Lo marcamos como 'Pendiente' para que el módulo de correo sepa qué procesar
+        df['EstadoNotificacion'] = 'Pendiente'
+        
+
+               
+        # Agrupar por 'Doc.compr.' y sumar 'Precio neto'
+        df = df.groupby("Doc.compr.") .agg({  
+                "Fecha doc.": "first",
+                "Acreedor": "first",
+                "Nombre 1": "first",
+                "Creado": "first",
+                "Estr.": "first", 
+                "Status Lib": "first",
+                "Precio neto": "sum", # Sumamos el precio neto para cada documento de compra  // STEV : se deja fuera del alcance por ahora.
+                "FechaActualizacion": "first",
+                "EstadoNotificacion": "first",
+                # "Fecha Lib": "first",
+                # "Usuario Li": "first",
+                # "Fecha Lib.": "first",
+                # "Usuario Li": "first"
+            }).reset_index()
+        
+        df['ContadorEnvio']= 0
+
+        return df
+
+def descargadataestliberacion (session):
+    """
+    Pasos en SAP para descargar la data de estrategias de Liberacio, deja un TXT, en el file server.
+    """
+
+    try :
+        db= Database()
+        engine = db.get_engine()
+        if not session: return
+        session = ObtenerSesionActiva()
+
+        AbrirTransaccion(session, "ZMM_68")
+          
+        ahora = datetime.datetime.now() # Obtenemos la fecha y hora actual
+        fecha_formateada = ahora.strftime("%d.%m.%Y") # Ejemplo de salida: 01.01.2026
+        primer_dia_anio = datetime.date(ahora.year, 1, 1)    # Crear una fecha usando el año actual, mes 1, día 1
+        primer_dia_anio = primer_dia_anio.strftime("%d.%m.%Y")  # Ejemplo de salida: 01.01.2026
+
+        session.findById("wnd[0]/usr/ctxtR_BEDAT-LOW").text = primer_dia_anio #Primer dia del año actual 
+        session.findById("wnd[0]/usr/ctxtR_BEDAT-HIGH").text = fecha_formateada #Fecha actual
+        
+        # Grupo de Organización de Compras
+        grupoOrgCompras = pd.read_sql_table("Config_Compras", engine, schema="PagoArriendos")
+        grupoOrgCompras = grupoOrgCompras['CodigoOrg'].tolist()
+        logger.debug(grupoOrgCompras)
+        #grupoOrgCompras = ["OC03","OC30","OC02"]# Esto lo puedes traer de la tabla de la base de datos db, parametros 
+        texto_sap = "\r\n".join(grupoOrgCompras)
+        pyperclip.copy(texto_sap) # copia al portapapeles la informacion 
+        session.findById("wnd[0]/usr/btn%_R_EKORG_%_APP_%-VALU_PUSH").press() # Abre Ventana org de Compras 
+        session.findById("wnd[1]/tbar[0]/btn[16]").press() #Boton basura, borrar datos 
+        session.findById("wnd[1]/tbar[0]/btn[24]").press() #Boton pegar datos 
+        session.findById("wnd[1]/tbar[0]/btn[8]").press() # Ejecutar Filtro 
+
+        # Estado de la OC // Actualizacion : se traen todos los estados, no es necesario filtrar.
+        #session.findById("wnd[0]/usr/ctxtR_FRGKE-LOW").text = "B" # se Filtra por estado de bloqueo, B 
+
+        # Número de Pedido  
+        #session.findById("wnd[0]/usr/ctxtR_EBELN-LOW").text = "4001155953" # solo para validar una OC. para pruebas 
+        listaOC = ["4001155953","4001155956","4001155955","4001155957"] # Esto lo puedes traer de tu tabla de la base de datos db, base medicamentos 
+        texto_sap = "\r\n".join(listaOC)
+        pyperclip.copy(texto_sap)
+        session.findById("wnd[0]/usr/btn%_R_EBELN_%_APP_%-VALU_PUSH").press() # Abre ventana numero de pedido
+        session.findById("wnd[1]/tbar[0]/btn[16]").press() #Boton basura, borrar datos 
+        session.findById("wnd[1]/tbar[0]/btn[24]").press()
+        session.findById("wnd[1]/tbar[0]/btn[8]").press()
+              
+        # Responsable
+        #session.findById("wnd[0]/usr/txtR_ERNAM-LOW").text = "FERNCAMS" #Responsable ERIIGUZV
+        responsable = pd.read_sql_table("Responsable", engine, schema="PagoArriendos")
+        responsable = responsable['Responsable'].tolist()
+        #responsable = ["FERNCAMS","ERIIGUZV"] # Esto lo puedes traer de la tabla de la base de datos db, parametros 
+        texto_sap = "\r\n".join(responsable)
+        pyperclip.copy(texto_sap)
+        session.findById("wnd[0]/usr/btn%_R_ERNAM_%_APP_%-VALU_PUSH").press() # Abre ventana responsable de la OC
+        session.findById("wnd[1]/tbar[0]/btn[16]").press() # Boton basura, borrar datos
+        session.findById("wnd[1]/tbar[0]/btn[24]").press()
+        session.findById("wnd[1]/tbar[0]/btn[8]").press()
+               
+        
+        # Ejecutar búsqueda
+        session.findById("wnd[0]/tbar[1]/btn[8]").press() #Ejecutar búsqueda
+
+        # Guardar resultados en txt
+        rutaGuardar = fr"{in_config('PathTemp')}\HU08"
+        session.findById("wnd[0]/tbar[1]/btn[45]").press()
+        session.findById("wnd[1]/tbar[0]/btn[0]").press()
+        session.findById("wnd[1]/usr/ctxtDY_PATH").text = rutaGuardar
+        session.findById("wnd[1]/usr/ctxtDY_FILENAME").text = f"EstrategiasDeLiberacion{fecha_formateada}.txt"
+        session.findById("wnd[1]/tbar[0]/btn[0]").press()
+
+    except:
+        logger.exception("Error en la descarga de data desde SAP Estrategias de liberacion ")
+
