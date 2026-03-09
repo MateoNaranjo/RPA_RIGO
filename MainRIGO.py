@@ -1,6 +1,11 @@
 from Repositorios.Excel import Excel
+<<<<<<< HEAD
 from HU.HU07_ClasificarOrdenesOC import HU07_ClasificarOC
 #from HU.HU08_EstrategiasDeLiberacion import HU08_EstrategiasDeLiberacion
+=======
+#from HU.HU07_ClasificarOrdenesOC import HU07_ClasificarOC
+from HU.HU08_EstrategiasDeLiberacion import HU08_EstrategiasDeLiberacion
+>>>>>>> c5ff9b9c0ad9f2ec96dcbdcfe04e1ab31888b45b
 from HU.HU00_Despliegue import Reutilizables
 
 from HU.HU04_NotificarOCSinFacturar import HU04_Auditoria

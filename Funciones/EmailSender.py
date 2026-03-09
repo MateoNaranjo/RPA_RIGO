@@ -11,6 +11,7 @@ from pathlib import Path
 from Config.Settings import CONFIG_EMAIL
 from Funciones.EscribirLog import WriteLog
 from Config.init_config import in_config
+from Repositorios.Correos import CorreosRepo
 
 
 class EmailSender:
@@ -47,9 +48,14 @@ class EmailSender:
         """
         try:
             # Intentar leer con diferentes engines para mejor compatibilidad
-            df = pd.read_excel(archivo_excel, engine="openpyxl")
-
+            #df = pd.read_excel(archivo_excel, engine="openpyxl")
+            df = pd.read_excel(archivo_excel, engine="xlrd")  # Cambia el engine si tienes problemas con openpyxl
+            print(f"data frame leido del excel {archivo_excel} : {df}")
+            print(df.head())  # DEBUG: Mostrar las primeras filas para verificar la lectura
             # Limpiar espacios en blanco de las columnas
+            df2 = CorreosRepo.ObtenerParametrosCorreo(cod_email=1)
+            print(f"data frame leido desde la base de datos : {df2}")
+            print(df2.head()) 
             df.columns = df.columns.str.strip()
 
             return df
