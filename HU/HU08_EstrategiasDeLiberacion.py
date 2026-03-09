@@ -50,9 +50,9 @@ class  HU08_EstrategiasDeLiberacion:
         ahora = datetime.datetime.now() # Obtenemos la fecha y hora actual
         fecha_formateada = ahora.strftime("%d.%m.%Y") # Ejemplo de salida: 01.01.2026
 
-        #df = LeerTXT_SAP_Universal(os.path.join(rutaGuardar, f"EstrategiasDeLiberacion{fecha_formateada}.txt"))
+        df = LeerTXT_SAP_Universal(os.path.join(rutaGuardar, f"EstrategiasDeLiberacion{fecha_formateada}.txt"))
         #df = LeerTXT_SAP_Universal(os.path.join(rutaGuardar, f"EstrategiasDeLiberacion5.txt"))
-        df = pd.read_excel(os.path.join(rutaGuardar, f"EstdeliberacionEjemplosRIGO.xlsx"))
+        #df = pd.read_excel(os.path.join(rutaGuardar, f"EstdeliberacionEjemplosRIGO.xlsx"))
         
         df = fomatodf(df)
         logger.debug("imprimir df para pruebas: ")
