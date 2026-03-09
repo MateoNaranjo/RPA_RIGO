@@ -8,7 +8,7 @@ import pandas as pd
 from Config.Settings import SAP_CONFIG, CADENA_CONFIG
 from Config.init_config import in_config
 from Config.Database import Database
-from Funciones.DescargarXML import login_colsubsidio, realizar_consulta, descargar_xml_final, mover_archivos, renombrar_archivo
+from Funciones.DescargarXML import login_colsubsidio, realizar_consulta, descargar_xml_final, renombrar_archivo
 
 
 class Facturas:
@@ -60,6 +60,13 @@ class Facturas:
             resultados =cursor.fetchall()
             return [row[0] for row in resultados]
         
+    def obtener_monto(self, oc):
+        query =f"SELECT Monto FROM PagoArriendos.ReporteHU07 WHERE OC = {oc}"
+        with Database.get_connection() as conn:
+            cursor=conn.cursor()
+            cursor.execute(query)
+            resultados=cursor.fetchall()
+            return [row[0] for row in resultados]
             
 
     def descargar_XML(self):
@@ -74,17 +81,19 @@ class Facturas:
             for nro_documento in documentos:
                 contador+=1
                 try:
-                    print("AAAAAAAAA")
+                    
                     oc=self.obtener_documentos_oc('Oc', nro_documento)
-                    print("EEEEEEEE")
+                    
                     realizar_consulta(contador, sesion, oc=nro_documento )
-                    print("IIIIIIIII")
-                    descargar_xml_final(sesion)
-                    print("OOOOOOOOOOOO")
+
+                    monto=self.obtener_monto(oc[contadorOc])
+                    
+                    descargar_xml_final(sesion, monto)
+                    
                     print(f"[+] XML descargado para documento {nro_documento}")
 
-                    mover_archivos(r"C:\ProgramData\RPA_RIGO", self.pathXML, 'xml')
-                    print("uuuuuuuuuuuuuu")
+                    
+                    
                     renombrar_archivo(self.pathXML, oc[contadorOc], 'xml')
                     print(oc[contadorOc])
                     contadorOc+=1
@@ -101,7 +110,7 @@ class Facturas:
             if documentos_no_encontrados:
                 df = pd.DataFrame(documentos_no_encontrados)
                 timestamp = datetime.now().strftime("%Y%m%d")
-                ruta_reporte = f"{self.rutaHU01}"+f"\\HU01\\XML_No_Encontrados_{timestamp}.xlsx"
+                ruta_reporte = f"{self.rutaHU01}"+f"\\HU01_{timestamp}.xlsx"
                 df.to_excel(ruta_reporte, index=False)
                 print(f"[!] Reporte generado: {ruta_reporte}")
 
@@ -126,7 +135,6 @@ class Facturas:
 
 
     def ejecutar(self):
-        print("RUTAAAAAAAAAAAAAA", self.cadenaRuta)
         self.descarga = Facturas.descargar_XML(self)
         oc = self.obtener_documentos_oc_comparar('OC')
         

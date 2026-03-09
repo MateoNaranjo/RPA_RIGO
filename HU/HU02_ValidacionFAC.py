@@ -23,7 +23,7 @@ class HU02_VerificacionDiaria:
         self.rutaTemp=in_config('PathTemp')
         self.ruta_input=Path(rf"{self.rutaTemp}"+"\HU07")
         #self.ruta_input = r"\\192.168.50.169\RPA_RIGO_GestionPagodeArrendamientos\Temp\HU07"
-        self.ruta_output = Path(rf"{self.rutaTemp}"+"HU02")
+        self.ruta_output = Path(rf"{self.rutaTemp}"+"\HU02")
 
     def ejecutar(self):
         print(">>> Iniciando HU02: Verificación Diaria de Facturación...")
@@ -84,7 +84,7 @@ class HU02_VerificacionDiaria:
         if not datos: return
         df_final = pd.DataFrame(datos)
         os.makedirs(self.ruta_output, exist_ok=True)
-        nombre = f"HU02_Control_Facturacion_{datetime.now().strftime('%Y%m%d')}.xlsx"
+        nombre = f"HU02_{datetime.now().strftime('%Y%m%d')}.xlsx"
         df_final.to_excel(os.path.join(self.ruta_output, nombre), index=False)
         print(f">>> HU02 Finalizada. Reporte generado: {nombre}")
 

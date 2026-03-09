@@ -118,10 +118,44 @@ class HU07_ClasificarOC:
             
             timestamp = datetime.now().strftime("%Y%d%m")
             self.ejecutar_cargue_desde_excel(f"{self.rutaTemporal}"+f"\HU07\Reporte_HU07{timestamp}.xlsx")
+            time.sleep(5)
+            self.actualizar_monto()
 
         except Exception as e:
             self.logger.error(f"Falla crítica en HU07: {e}")
             print(f"Falla crítica: {e}")
+
+    def actualizar_monto(self):
+        query1 = "SELECT Oc FROM PagoArriendos.ReporteHU07"
+        with Database.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query1)
+            resultadosOc = cursor.fetchall()
+
+        contador = 0
+        for oc in resultadosOc:
+            oc_valor = oc[0]
+            with Database.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT enero FROM PagoArriendos.basemedicamentoslimpio WHERE orden_2025 = ?", (oc_valor,))
+                resultadoMonto = cursor.fetchall()
+
+            if resultadoMonto:
+                try:
+                    monto_valor = float(resultadoMonto[0][0])
+                except (ValueError, TypeError):
+                    monto_valor = None
+
+                if monto_valor is not None:
+                    with Database.get_connection() as conn:
+                        cursor = conn.cursor()
+                        cursor.execute(
+                            "UPDATE PagoArriendos.ReporteHU07 SET Monto = ? WHERE Oc = ?",
+                            (monto_valor, oc_valor)
+                        )
+                        conn.commit()
+            contador += 1
+
 
     def generar_reporte_excel(self, lista_datos):
         """
@@ -173,7 +207,7 @@ class HU07_ClasificarOC:
         CREATE TABLE {tabla} (
             Oc VARCHAR(20) PRIMARY KEY,
             Proveedor VARCHAR(100),
-            Monto VARCHAR(100),
+            Monto FLOAT,
             EstadoSAP VARCHAR(20),
             Anexo VARCHAR(20),
             ClasificacionMonto VARCHAR(20),
@@ -216,7 +250,7 @@ class HU07_ClasificarOC:
                     valores=(
                         str(fila.get('OC')),
                         str(fila.get('Proveedor')),
-                        str(fila.get('Monto')),
+                        float(fila.get('Monto')),
                         str(fila.get('Estado SAP')),
                         str(fila.get('Anexo GOS')),
                         str(fila.get('Clasificación Monto')),

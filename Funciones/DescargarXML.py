@@ -17,6 +17,8 @@ import os
 
 
 
+
+
 def login_colsubsidio(usuario, contraseña, ruta):
     chrome_options = Options()
     chrome_options.add_experimental_option("detach", True)
@@ -173,9 +175,21 @@ def realizar_consulta(contador, driver, oc = None, nro_documento = None):
         print(f"Error durante la consulta: {e}")
         driver.save_screenshot("error_consulta.png")
         
-def descargar_xml_final(driver):
+def descargar_xml_final(driver, valor):
     wait = WebDriverWait(driver, 20)
     try:
+        columnas = driver.find_elements(By.XPATH, '//td[@role="gridcell"]')
+        contador=0
+        for celda in columnas:
+            if celda.text.strip() == valor:
+                print("Valor encontrado:", celda.text)
+                # Aquí puedes hacer algo con el elemento, por ejemplo:
+                driver.execute_script(f"arguments[{contador}].click();", xml_icon)
+                contador+=1
+                
+                break
+            else:
+                print("Valor no encontrado")
         # Esperar a que los resultados carguen y el icono sea visible
         xpath_xml = "//img[@title='Presenta el documento en XML firmado digitalmente']"
         xml_icon = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_xml)))
@@ -190,24 +204,10 @@ def descargar_xml_final(driver):
     except Exception as e:
         print(f"Error al descargar: {e}")
 
-def mover_archivos(origen, destino, extension='xml'):
-    pathOrigen=Path(origen)
-    pathDestino=Path(destino)
-
-    pathDestino.mkdir(parents=True, exist_ok=True)
-
-    for archivo in pathOrigen.glob(f"*.{extension}"):
-        if archivo.is_file():
-            try:
-                shutil.move(str(archivo), pathDestino)
-                print(f"[+] Archivo movido: {archivo.name}")
-            except Exception as e:
-                print(f'[-] error al mover el archivo {e}')
 
 
 
-import os
-from pathlib import Path
+
 
 def renombrar_archivo(rutaCarpeta, nuevoNombre, extension="xml"):
     carpeta = Path(rutaCarpeta)
