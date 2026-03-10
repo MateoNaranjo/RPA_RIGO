@@ -171,7 +171,7 @@ class Reutilizables:
                 
                 logger.info(f" Tabla [{esquema_destino}].[{nombre_hoja}] cargada exitosamente ({len(df)} registros).")
 
-            logger.info("--- Proceso de despliegue finalizado con éxito ---")
+            logger.info("--- Proceso de despliegue finalizado con exito ---")
 
         except Exception as e:
             logger.exception(f" Error critico durante el despliegue: {str(e)}")

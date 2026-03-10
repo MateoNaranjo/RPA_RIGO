@@ -73,7 +73,7 @@ class HU05_CargueSQL:
                     cursor.execute(query_insert, valores)
                 
                 conn.commit()
-                print(f"[+] Éxito: Se cargaron {len(df)} registros a SQL Server.")
+                print(f"[+] Exito: Se cargaron {len(df)} registros a SQL Server.")
 
         except Exception as e:
             print(f"[-] Error en el cargue: {e}")

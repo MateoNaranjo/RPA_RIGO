@@ -14,14 +14,18 @@ from Config.init_config import in_config
 from Repositorios.Correos import CorreosRepo
 from Config.Database import Database
 
+import logging
+
 
 class EmailSender:
     def __init__(
-        self,
-        smtp_server: str = None,
-        smtp_port: int = None,
-        email: str = None,
-        password: str = None,
+        self
+        # smtp_server: str = None,
+        # smtp_port: int = None,
+        # email: str = None,
+        # password: str = None,
+        
+
     ):
         """
         Inicializa el cliente de envío de correos
@@ -32,10 +36,12 @@ class EmailSender:
             email: Tu dirección de correo (por defecto usa CONFIG_EMAIL)
             password: Tu contraseña o app password (por defecto usa CONFIG_EMAIL)
         """
-        self.smtp_server = smtp_server or CONFIG_EMAIL["smtp_server"]
-        self.smtp_port = smtp_port or CONFIG_EMAIL["smtp_port"]
-        self.email = email or CONFIG_EMAIL["email"]
-        self.password = password or CONFIG_EMAIL["password"]
+        self.smtp_server = CONFIG_EMAIL["smtp_server"]
+        self.smtp_port = CONFIG_EMAIL["smtp_port"]
+        self.email = CONFIG_EMAIL["email"]
+        self.password = CONFIG_EMAIL["password"]
+        self.logger = logging.getLogger(__name__)
+        
 
     def leer_excel(self, archivo_excel: str) -> pd.DataFrame:
         """
@@ -49,43 +55,20 @@ class EmailSender:
         """
         try:
             # Intentar leer con diferentes engines para mejor compatibilidad
-            #df = pd.read_excel(archivo_excel, engine="openpyxl")
+    
             db= Database()
             engine = db.get_engine()
 
-            df = pd.read_excel(archivo_excel, engine="xlrd")  # Cambia el engine si tienes problemas con openpyxl
-            print(f"data frame leido del excel {archivo_excel} : {df}")
-            print(type(df))
-            print("Columnas obtenidas del df de la base de datos:")
-            print(df.columns.tolist())
-            print("Columnas obtenidas del list(df):")
-            print(list(df))
-            print("Columnas obtenidas del df.head():")
-            print(df.head())
-            print("Columnas obtenidas del  df.info()")
-            print(df.info())
-            
+            #df = pd.read_excel(archivo_excel, engine="openpyxl")  # Cambia el engine si tienes problemas con openpyxl
             # DEBUG: Mostrar las primeras filas para verificar la lectura
-            # Limpiar espacios en blanco de las columnas
+            
             df2 = pd.read_sql_table("EnvioCorreos", engine, schema="PagoArriendos")
-            print(f"data frame leido desde la base de datos : {df2}")
-            print(df2.head()) 
-            print(f"data frame leido del excel {archivo_excel} : {df}")
-            print(type(df2))
-            print("Columnas obtenidas del df de la base de datos:")
-            print(df2.columns.tolist())
-            print("Columnas obtenidas del list(df):")
-            print(list(df2))
-            print("Columnas obtenidas del df.head():")
-            print(df2.head())
-            print("Columnas obtenidas del  df.info()")
-            print(df2.info())
+            # Limpiar espacios en blanco de las columnas Stev: revisar si es necesario ya que viene desde la base de datos SQL
+            df2.columns = df2.columns.str.strip()
 
-            df.columns = df.columns.str.strip()
-
-            return df
+            return df2
         except Exception as e:
-            WriteLog(mensaje=f"Error al leer el archivo Excel: {e} - {traceback.format_exc()}",estado="ERROR",nombreTarea="EmailSender",)
+            self.logger.debug(self.logger.exception(mensaje=f"Error al leer el archivo Excel: {e} - {traceback.format_exc()}"))
             return None
 
     def enviar_correo(
@@ -132,7 +115,7 @@ class EmailSender:
                     if os.path.exists(archivo):
                         self._adjuntar_archivo(mensaje, archivo)
                     else:
-                        WriteLog(mensaje=f"Advertencia: El archivo {archivo} no existe",estado="WARN",nombreTarea="enviar_correo",)
+                        self.logger.warning(f"Advertencia: El archivo {archivo} no existe")
 
             # Conectar y enviar
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
@@ -147,11 +130,11 @@ class EmailSender:
                     destinatarios.extend(bcc)
 
                 server.sendmail(self.email, destinatarios, mensaje.as_string())
-            WriteLog(mensaje=f"Correo enviado exitosamente a {destinatario}",estado="INFO",nombreTarea="enviar_correo",)
+            self.logger.info(f"Correo enviado exitosamente a {destinatario}")
             return True
 
         except Exception as e:
-            WriteLog(mensaje=f"Error al enviar correo a {destinatario}: {e} - {traceback.format_exc()}",estado="ERROR",nombreTarea="enviar_correo",)
+            self.logger.exception(f"Error al enviar correo a {destinatario}: {e} - {traceback.format_exc()}")
             return False
 
     def enviar_correo_personalizado(
@@ -166,7 +149,7 @@ class EmailSender:
         """
         Envía un correo con estructura personalizada. Es un alias para enviar_correo.
         """
-        WriteLog(mensaje=f"📧 Iniciando envío personalizado para: {destinatario}",estado="INFO",nombreTarea="enviar_correo",)
+        self.logger.info(f"📧 Iniciando envío personalizado para: {destinatario}")
         return self.enviar_correo(
             destinatario=destinatario,
             asunto=asunto,
@@ -228,8 +211,10 @@ class EmailSender:
             Diccionario con estadísticas de envío
         """
         # DEBUG: Imprimir ruta del archivo
-        # print(f"🔍 DEBUG: Leyendo archivo: {archivo_excel}")
-        # print(f"🔍 DEBUG: Archivo existe: {os.path.exists(archivo_excel)}")
+        # self.logger.debug(f"🔍 DEBUG: Leyendo archivo: {archivo_excel}")
+        # self.logger.debug(f"🔍 DEBUG: Archivo existe: {os.path.exists(archivo_excel)}")}
+
+        
 
         df = self.leer_excel(archivo_excel)
 
@@ -237,19 +222,19 @@ class EmailSender:
             return {"exitosos": 0, "fallidos": 0, "total": 0}
 
         # DEBUG: Mostrar columnas encontradas
-        # print(f"🔍 DEBUG: Columnas en el DataFrame: {df.columns.tolist()}")
-        # print(f"🔍 DEBUG: Buscando columna: '{columna_destinatario}'")
-        # print(f"🔍 DEBUG: ¿Columna existe?: {columna_destinatario in df.columns}")
+        # self.logger.debug(f"🔍 DEBUG: Columnas en el DataFrame: {df.columns.tolist()}")
+        # self.logger.debug(f"🔍 DEBUG: Buscando columna: '{columna_destinatario}'")
+        # self.logger.debug(f"🔍 DEBUG: ¿Columna existe?: {columna_destinatario in df.columns}")
 
         # Filtrar por código si se proporciona
         if codigoCorreo is not None:
             df = df[df[columna_codigo] == codigoCorreo]
             if df.empty:
-                #print(f"⚠️  No se encontraron correos con código {codigoCorreo}")
-                WriteLog(mensaje=f"⚠️ No se encontraron correos con código {codigoCorreo}",estado="WARN",nombreTarea="procesar_excel_y_enviar",)
+                #self.logger.debug(f"⚠️  No se encontraron correos con código {codigoCorreo}")
+                self.logger.warning(f"No se encontraron correos con código {codigoCorreo}")
                 return {"exitosos": 0, "fallidos": 0, "total": 0}
-            #print(f"📧 Enviando correos con código {codigoCorreo} ({len(df)} correo(s))\n")
-            WriteLog(mensaje=f"📧 Enviando correos con código {codigoCorreo} ({len(df)} correo(s))",estado="INFO",nombreTarea="procesar_excel_y_enviar",)
+            #self.logger.debug(f"📧 Enviando correos con código {codigoCorreo} ({len(df)} correo(s))\n")
+            self.logger.info(f"Enviando correos con codigo {codigoCorreo} ({len(df)} correo(s))")
 
         exitosos = 0
         fallidos = 0
@@ -259,19 +244,16 @@ class EmailSender:
             try:
                 destinatario_raw = fila[columna_destinatario]
             except KeyError:
-                # print(f"⚠️  ERROR: Columna '{columna_destinatario}' no encontrada")
-                # print(f"   Columnas disponibles: {fila.index.tolist()}")
-                WriteLog(
-                    mensaje=f"ERROR: Columna '{columna_destinatario}' no encontrada, Columnas disponibles: {fila.index.tolist()}",
-                    estado="ERROR",
-                    nombreTarea="procesar_excel_y_enviar",
-                    
+                # self.logger.debug(f"⚠️  ERROR: Columna '{columna_destinatario}' no encontrada")
+                # self.logger.debug(f"   Columnas disponibles: {fila.index.tolist()}")
+                self.logger.exception(
+                    f"ERROR: Columna '{columna_destinatario}' no encontrada, Columnas disponibles: {fila.index.tolist()}"
                 )
                 fallidos += 1
                 continue
 
             # DEBUG TEMPORAL
-            # print(
+            # self.logger.debug(
             #    f"🔍 DEBUG Fila {idx + 2}: destinatario_raw = {repr(destinatario_raw)}, tipo = {type(destinatario_raw).__name__}"
             # )
 
@@ -281,7 +263,7 @@ class EmailSender:
             else:
                 destinatario = str(destinatario_raw).strip()
 
-            # print(f"🔍 DEBUG Fila {idx + 2}: destinatario procesado = '{destinatario}'")
+            # self.logger.debug(f"🔍 DEBUG Fila {idx + 2}: destinatario procesado = '{destinatario}'")
 
             asunto = str(fila.get(columna_asunto, "Sin asunto"))
             cuerpo = str(fila.get(columna_cuerpo, ""))
@@ -293,7 +275,7 @@ class EmailSender:
                 or destinatario == ""
                 or pd.isna(destinatario_raw)
             ):
-                # print(f"⚠️  Fila {idx + 2}: Destinatario vacío, omitiendo...")
+                # self.logger.debug(f"⚠️  Fila {idx + 2}: Destinatario vacío, omitiendo...")
                 fallidos += 1
                 continue
 
@@ -341,26 +323,50 @@ class EmailSender:
                             if adj.strip()
                         ]
 
+            # EXTRAER PLANTILLA DE LA DB
+            plantilla_db = str(fila.get(columna_cuerpo, ""))
+
+            # VOLVERLA DINÁMICA CON LOS DATOS DE LA FILA ACTUAL
+            cuerpo_final = self.preparar_cuerpo_dinamico(plantilla_db, fila)
+
             # Enviar correo
-            if self.enviar_correo(destinatario, asunto, cuerpo, cc, bcc, adjuntos):
+            if self.enviar_correo(destinatario, asunto, cuerpo_final, cc, bcc, adjuntos):
                 exitosos += 1
             else:
                 fallidos += 1
 
         total = exitosos + fallidos
-        # print(f"\n{'='*50}")
-        # print(f"Resumen de envío:")
-        # print(f"Total de correos: {total}")
-        # print(f"Exitosos: {exitosos}")
-        # print(f"Fallidos: {fallidos}")
-        # print(f"{'='*50}")
-        WriteLog(
-        mensaje=f"Resumen de envío:[Total:{total},Exitosos:{exitosos},Fallidos:{fallidos}].",
-        estado="INFO",
-        nombreTarea="procesar_excel_y_enviar",
-        )
+        self.logger.debug(f"\n{'='*50}")
+        self.logger.debug(f"Resumen de envío:")
+        self.logger.debug(f"Total de correos: {total}")
+        self.logger.debug(f"Exitosos: {exitosos}")
+        self.logger.debug(f"Fallidos: {fallidos}")
+        self.logger.debug(f"{'='*50}")
+        self.logger.info(f"Resumen de envio:[Total:{total},Exitosos:{exitosos},Fallidos:{fallidos}].")
 
         return {"exitosos": exitosos, "fallidos": fallidos, "total": total}
+    
+    def preparar_cuerpo_dinamico(self, plantilla: str, datos_fila: pd.Series) -> str:
+        """
+        Reemplaza los marcadores {columna} en la plantilla con los valores reales del DataFrame.
+        """
+        try:
+            if pd.isna(plantilla) or not plantilla:
+                return ""
+
+            # Convertimos la fila a un diccionario para el mapeo
+            # Esto permite que si en la DB ponen {Nombre}, se busque la columna 'Nombre'
+            mapeo = datos_fila.to_dict()
+            
+            # .format(**mapeo) busca las llaves en el string y las reemplaza por el valor de la llave en el dict
+            return plantilla.format(**mapeo)
+            
+        except KeyError as e:
+            self.logger.error(f"Error: El marcador {e} en la plantilla no existe en las columnas del Excel/DB")
+            return plantilla # Retorna la plantilla original si falla
+        except Exception as e:
+            self.logger.error(f"Error al procesar cuerpo dinámico: {e}")
+            return plantilla
 
 
 # Ejemplo de uso
@@ -378,7 +384,7 @@ if __name__ == "__main__":
     # )
 
     # --- PRUEBA 1: Usando el NUEVO método personalizado (enviar_correo_personalizado) ---
-    # print("\n--- PRUEBA 1: Envío Personalizado (Método Nuevo) ---")
+    # self.logger.debug("\n--- PRUEBA 1: Envío Personalizado (Método Nuevo) ---")
     # exito_personalizado = sender.enviar_correo_personalizado(
     #     destinatario="destinatario_personalizado@ejemplo.com",
     #     asunto="Correo de Prueba vía Método Personalizado",
@@ -388,13 +394,13 @@ if __name__ == "__main__":
     # )
 
     # if exito_personalizado:
-    #     print("Envío personalizado exitoso (Método Nuevo).")
+    #     self.logger.debug("Envío personalizado exitoso (Método Nuevo).")
     # else:
-    #     print("Envío personalizado fallido (Método Nuevo).")
+    #     self.logger.debug("Envío personalizado fallido (Método Nuevo).")
 
     # --- PRUEBA 2: Usando el método enviar_correo ORIGINAL (Envío Individual) ---
     # Nota: Esta prueba es redundante si se usa la Prueba 1, pero se incluye para probar la función original.
-    # print("\n--- PRUEBA 2: Envío Individual (Método Original) ---")
+    # self.logger.debug("\n--- PRUEBA 2: Envío Individual (Método Original) ---")
     # sender.enviar_correo(
     #     destinatario="otro_destinatario@example.com",
     #     asunto="Prueba de correo Original",
@@ -403,13 +409,13 @@ if __name__ == "__main__":
     # )
 
     # # --- PRUEBA 3: Usando el método de Procesamiento Masivo (procesar_excel_y_enviar) ---
-    # print("\n--- PRUEBA 3: Procesamiento Masivo (Excel) ---")
+    # self.logger.debug("\n--- PRUEBA 3: Procesamiento Masivo (Excel) ---")
     # resultados = sender.procesar_excel_y_enviar(
     #     archivo_excel="correos.xlsx",  # Asegúrate de que este archivo exista
     #     codigoCorreo=1,
     #     adjuntos_dinamicos=["reporte.pdf", "log.txt"],
     # )
-    # print(f"Resumen del procesamiento por Excel: {resultados}")
+    # self.logger.debug(f"Resumen del procesamiento por Excel: {resultados}")
 
 
 # *************************
@@ -421,14 +427,10 @@ def EnviarNotificacionCorreo(
     codigoCorreo: int, nombreTarea: str = "Notificacion", adjuntos: list = None
 ):
     try:
-        WriteLog(
-            mensaje=f"Enviando notificación con código {codigoCorreo}...",
-            estado="INFO",
-            nombreTarea=nombreTarea,
-            
-        )
-
+        
+        
         sender = EmailSender()
+        logger = logging.getLogger(__name__)
 
         resultados = sender.procesar_excel_y_enviar(
             archivo_excel=in_config("ArchivoCorreos"),
@@ -443,29 +445,15 @@ def EnviarNotificacionCorreo(
         )
 
         if resultados["exitosos"] > 0:
-            WriteLog(
-                mensaje=f"Notificación enviada correctamente. Exitosos: {resultados['exitosos']}",
-                estado="INFO",
-                nombreTarea=nombreTarea,
-                
-            )
+            logger.info(f"Notificacion enviada correctamente. Exitosos: {resultados['exitosos']}")
             return True
         else:
-            WriteLog(
-                mensaje=f"No se pudo enviar la notificación. Fallidos: {resultados['fallidos']}",
-                estado="WARNING",
-                nombreTarea=nombreTarea,
-                
-            )
+            logger.error(
+                mensaje=f"No se pudo enviar la notificación. Fallidos: {resultados['fallidos']}")
             return False
 
     except Exception as e:
-        WriteLog(
-            mensaje=f"Error al enviar notificación: {e} - {traceback.format_exc()}",
-            estado="ERROR",
-            nombreTarea=nombreTarea,
-            
-        )
+        logger.exception(f"Error al enviar notificación: {e} - {traceback.format_exc()}")
         return False
 
 
@@ -494,21 +482,12 @@ def EnviarCorreoPersonalizado(
         bool: True si se envió correctamente, False en caso contrario.
     """
     try:
-        WriteLog(
-            mensaje=f"Preparando envío personalizado para {destinatario}...",
-            estado="INFO",
-            nombreTarea=nombreTarea,
-            
-        )
+        logger = logging.getLogger(__name__)
+        logger.info(f"Preparando envio personalizado para {destinatario}...")
 
         # Log de adjuntos
         if adjuntos:
-            WriteLog(
-                mensaje=f"Adjuntos a enviar: {', '.join(adjuntos)}",
-                estado="INFO",
-                nombreTarea=nombreTarea,
-                
-            )
+            logger.info(f"Adjuntos a enviar: {', '.join(adjuntos)}")
 
         # Crear EmailSender con configuración por defecto
         sender = EmailSender()
@@ -524,27 +503,14 @@ def EnviarCorreoPersonalizado(
         )
 
         if exito:
-            WriteLog(
-                mensaje=f"Correo personalizado enviado exitosamente a {destinatario}.",
-                estado="INFO",
-                nombreTarea=nombreTarea,
-                
-            )
+            logger.info(f"Correo personalizado enviado exitosamente a {destinatario}")
             return True
         else:
-            WriteLog(
-                mensaje=f"Fallo al enviar el correo personalizado a {destinatario}.",
-                estado="WARNING",
-                nombreTarea=nombreTarea,
-                
-            )
+            logger.warning(f"Fallo al enviar el correo personalizado a {destinatario}")
             return False
 
     except Exception as e:
-        WriteLog(
-            mensaje=f"Error fatal en el envío personalizado: {e} - {traceback.format_exc()}",
-            estado="ERROR",
-            nombreTarea=nombreTarea,
-            
-        )
+        logger.exception(f"Error fatal en el envío personalizado: {e} - {traceback.format_exc()}")
         return False
+
+

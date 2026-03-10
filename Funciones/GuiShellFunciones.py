@@ -152,7 +152,7 @@ def obtener_numero_oc(session):
     Obtiene el número de la Orden de Compra creada desde la barra de estado.
     """
     try:
-        # El mensaje de éxito con el número de OC suele aparecer en la barra de estado.
+        # El mensaje de exito con el número de OC suele aparecer en la barra de estado.
         status_text = session.findById("wnd[0]/sbar").text
         # Usamos una expresión regular para buscar un número que sigue a un texto estándar.
         # "Standard PO created under the number 4500021244" -> Ejemplo
@@ -905,13 +905,15 @@ def validar_estrategias_sap(df_sap, df_excel):
 
 def impimmirdf(df: pd.DataFrame):
         
-        print(type(df))
+        #print(type(df))
         # print("Columnas obtenidas del df de la base de datos:")
         # print(df.columns.tolist())
         # print("Columnas obtenidas del list(df):")
         # print(list(df))
         print("Columnas obtenidas del df.head():")
         print(df.head())
+        #print(df.to_string())
+
         # print("Columnas obtenidas del  df.info()")
         # print(df.info())
 
@@ -927,8 +929,16 @@ def fomatodf(df: pd.DataFrame):
         for i in cols[cols.duplicated()].unique():
             cols[cols == i] = [f"{i}_{j}" if j != 0 else i for j in range(sum(cols == i))]
         df.columns = cols # Ahora las columnas se llamarán "Nombre 1" (la primera) y "Nombre 1_1" (la segunda)
-     
-           
+        # 1. Quitamos filas donde Borrado es "L"
+        # 2. Quitamos filas donde Status Lib sea NaN (nulo)
+        # 3. Quitamos filas donde Status Lib esté vacío (espacios en blanco)
+
+        df = df[
+            (df['Borrado'] != 'L') & 
+            (df['Status Lib'].notna()) & 
+            (df['Status Lib'].astype(str).str.strip() != '')
+        ].copy()
+                
         # Filtramos solo las columnas que existan en el DataFrame original #2
         columnas_interes = ['Fecha doc.','Acreedor','Nombre 1','Creado','Estr.', 'Doc.compr.', 'Status Lib', 'Precio neto', ]
         columnas_validas = [col for col in columnas_interes if col in df.columns]
@@ -940,9 +950,7 @@ def fomatodf(df: pd.DataFrame):
         df['FechaActualizacion'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         # Agregar el estado de notificación inicial, Lo marcamos como 'Pendiente' para que el módulo de correo sepa qué procesar
         df['EstadoNotificacion'] = 'Pendiente'
-        
 
-               
         # Agrupar por 'Doc.compr.' y sumar 'Precio neto'
         df = df.groupby("Doc.compr.") .agg({  
                 "Fecha doc.": "first",
@@ -954,6 +962,7 @@ def fomatodf(df: pd.DataFrame):
                 "Precio neto": "sum", # Sumamos el precio neto para cada documento de compra  // STEV : se deja fuera del alcance por ahora.
                 "FechaActualizacion": "first",
                 "EstadoNotificacion": "first",
+                #"CorreoArrendatarios":"first",
                 # "Fecha Lib": "first",
                 # "Usuario Li": "first",
                 # "Fecha Lib.": "first",
@@ -961,6 +970,7 @@ def fomatodf(df: pd.DataFrame):
             }).reset_index()
         
         df['ContadorEnvio']= 0
+        df['CorreoArrendatarios'] = 0  
 
         return df
 

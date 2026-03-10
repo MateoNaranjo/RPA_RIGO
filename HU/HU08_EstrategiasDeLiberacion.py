@@ -11,8 +11,7 @@ from Funciones.ConexionSAP import ConexionSAP
 from Repositorios.Excel import Excel as ExcelDB
 from Config.Database import Database
 from Funciones.GuiShellFunciones import AbrirTransaccion,ObtenerSesionActiva,LeerTXT_SAP_Universal,impimmirdf,fomatodf,descargadataestliberacion
-from Funciones.EmailSender import EmailSender, EnviarCorreoPersonalizado, EnviarNotificacionCorreo
-
+from Funciones.EmailSender import EmailSender, EnviarCorreoPersonalizado,EnviarNotificacionCorreo
 from sqlalchemy import text
 
 import logging
@@ -46,19 +45,22 @@ class  HU08_EstrategiasDeLiberacion:
         engine = db.get_engine()
         #descargadataestliberacion (session = self.sap.iniciar_sesion_sap())
         EnviarNotificacionCorreo(codigoCorreo=1,nombreTarea="Probando db")  #Probando metodos de envio de correo
+
+        #TODO: Validar la exixtencia de correos en la tabla 
+
         rutaGuardar = fr"{in_config('PathTemp')}\HU08"
         ahora = datetime.datetime.now() # Obtenemos la fecha y hora actual
         fecha_formateada = ahora.strftime("%d.%m.%Y") # Ejemplo de salida: 01.01.2026
 
-        df = LeerTXT_SAP_Universal(os.path.join(rutaGuardar, f"EstrategiasDeLiberacion{fecha_formateada}.txt"))
-        #df = LeerTXT_SAP_Universal(os.path.join(rutaGuardar, f"EstrategiasDeLiberacion5.txt"))
-        #df = pd.read_excel(os.path.join(rutaGuardar, f"EstdeliberacionEjemplosRIGO.xlsx"))
+        #df = LeerTXT_SAP_Universal(os.path.join(rutaGuardar, f"EstrategiasDeLiberacion{fecha_formateada}.txt"))
+        #df = LeerTXT_SAP_Universal(os.path.join(rutaGuardar, f"EstrategiasDeLiberacion1.txt"))
+        df = pd.read_excel(os.path.join(rutaGuardar, f"EstdeliberacionEjemplosRIGO.xlsx"))
         
         df = fomatodf(df)
         logger.debug("imprimir df para pruebas: ")
-        #impimmirdf(df)
+        impimmirdf(df)
          
-        #df.to_sql("EstrategiasDeLiberacion", engine, schema="PagoArriendos", if_exists='replace', index=False)
+        df.to_sql("EstrategiasDeLiberacion", engine, schema="PagoArriendos", if_exists='replace', index=False)
     
         df.to_sql("Temp_Estrategias", con=engine, if_exists='replace', index=False)
 
@@ -80,11 +82,11 @@ class  HU08_EstrategiasDeLiberacion:
                 WHEN NOT MATCHED THEN
                     INSERT (
                         [Doc.compr.], [Fecha doc.], [Acreedor], [Nombre 1], [Creado], 
-                        [Estr.], [Status Lib], [Precio neto],[FechaActualizacion],[EstadoNotificacion],[ContadorEnvio]
+                        [Estr.], [Status Lib], [Precio neto],[FechaActualizacion],[EstadoNotificacion],[ContadorEnvio],[CorreoArrendatarios]
                     )
                     VALUES (
                         Source.[Doc.compr.], Source.[Fecha doc.], Source.[Acreedor], Source.[Nombre 1], Source.[Creado],
-                        Source.[Estr.], Source.[Status Lib], Source.[Precio neto], GETDATE(),'Pendiente', 0
+                        Source.[Estr.], Source.[Status Lib], Source.[Precio neto], GETDATE(),'Pendiente', 0, 0
                     );
             """))
             conn.commit()
@@ -141,15 +143,18 @@ class  HU08_EstrategiasDeLiberacion:
         # Filtro para Pendientes (P) que están Pendientes de notificación
         df_pendientes = df[(df['Status Lib'] == 'P') & (df['EstadoNotificacion'] == 'Pendiente')].copy()
         # Filtro para Liberadas (L) que están Pendientes de notificación
-        df_liberadas = df[(df['Status Lib'] == 'L') & (df['EstadoNotificacion'] == 'Pendiente')].copy()
+        df_liberadas = df[(df['Status Lib'] != 'B') & (df['CorreoArrendatarios'] == 0 )].copy()
         #df_liberadas = df_liberadas[df_liberadas['ContadorEnvio'] == 0].copy()
         # Filtro para Oc que llevan mas de 3 notificaciones 
-        df_atrasadas = df[df['ContadorEnvio'] > 3].copy()
+        df_atrasadas = df[df['ContadorEnvio'] > 3 ].copy()
 
-        
+        logger.debug("df_bloqueadas")
         impimmirdf(df_bloqueadas)
+        logger.debug("df_pendientes")
         impimmirdf(df_pendientes)
+        logger.debug("df_liberadas")
         impimmirdf(df_liberadas)
+        logger.debug("df_atrasadas")
         impimmirdf(df_atrasadas)
 
              
@@ -157,7 +162,10 @@ class  HU08_EstrategiasDeLiberacion:
 
         # === 2. CRUCE PARA CASO 3 (LIBERADAS) ===
         # Leemos el excel y aseguramos que NIT sea string para un cruce limpio
-        df_proveedores = pd.read_sql_table("Proveedores", engine, schema="PagoArriendos")
+
+        consulta = "SELECT * FROM [PagoArriendos].[Arrendatarios]"
+        df_proveedores = pd.read_sql_query(consulta, engine)
+        #df_proveedores = pd.read_sql_table("Arrendatarios", engine, schema="PagoArriendos")
         df_proveedores['NIT'] = df_proveedores['NIT'].astype(str).str.strip()
         df_liberadas['Acreedor'] = df_liberadas['Acreedor'].astype(str).str.strip()
        
@@ -170,7 +178,14 @@ class  HU08_EstrategiasDeLiberacion:
             right_on='NIT', 
             how='left'
         )
+
+        logger.debug("df_final_L")
         impimmirdf(df_final_L)
+
+        df_SinCorreo = df_final_L[(df_final_L['Correo Proveedor'].notna()) & (df_final_L['Correo Proveedor'].astype(str).str.strip() != '')].copy()
+        logger.debug("df_SinCorreo")
+        impimmirdf(df_SinCorreo)
+
 
         
 
@@ -191,7 +206,7 @@ class  HU08_EstrategiasDeLiberacion:
                     cuerpo=cuerpo_b,
                     nombreTarea="Notificacion_Bloqueadas"
                 )
-                logger.info("Correo de Bloqueadas enviado con éxito.")
+                logger.info("Correo de Bloqueadas enviado con exito.")
 
                 # 3. ACTUALIZACIÓN EN BASE DE DATOS
                 # Extraemos los Documentos de Compras (IDs únicos) para marcarlos como 'Enviado'
@@ -244,7 +259,7 @@ class  HU08_EstrategiasDeLiberacion:
                         cuerpo=cuerpo_p,
                         nombreTarea=f"Notificacion_Pendientes_{estrategia}"
                     )
-                    logger.info(f"Correo enviado con éxito para la estrategia: {estrategia}")
+                    logger.info(f"Correo enviado con exito para la estrategia: {estrategia}")
 
                     # 3. ACTUALIZACIÓN EN BASE DE DATOS (Solo para los registros de este grupo/estrategia)
                     lista_ids_p = grupo['Doc.compr.'].astype(str).tolist()
@@ -272,20 +287,26 @@ class  HU08_EstrategiasDeLiberacion:
             # Generamos la fecha con el formato estándar del Bot
             fecha_hoy_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             ano_actual = datetime.datetime.now().strftime('%Y')
-            logger.debug(f"fecha_hoy_str{fecha_hoy_str}")
-            logger.debug(f"ano_actual{ano_actual}")
+            logger.debug(f"fecha_hoy_str :{fecha_hoy_str}")
+            logger.debug(f"ano_actual :{ano_actual}")
 
             # Agrupamos por Acreedor para no saturar al arrendador con múltiples correos
             for acreedor, grupo in df_final_L.groupby("Acreedor"):
+
                 try:
                     # 1. Extracción de datos del Arrendador
                     correo_proveedor = grupo['Correo Proveedor'].iloc[0]
                     nombre_arrendador = grupo['Nombre 1 (Arrendador)'].iloc[0]
                     asunto = f"COLSUBSIDIO - Orden de compra {ano_actual} Arrendamiento y/o Administración"
+                    # Validar que el correo sea un string válido y no nan
+                    if pd.isna(correo_proveedor) or str(correo_proveedor).lower() == 'nan':
+                        self.logger.warning(f"Saltando registro {grupo.get('Doc.compr.')} porque el correo es nulo.")
+                        continue # Salta a la siguiente iteración
                     
                     # 2. Construcción dinámica de la tabla HTML
                     filas_tabla = ""
                     for _, row in grupo.iterrows():
+                        
                         filas_tabla += f"""
                         <tr>
                             <td style='border: 1px solid #0056b3; padding: 8px;'>{row.get('Inmueble', 'N/A')}</td>
@@ -296,6 +317,11 @@ class  HU08_EstrategiasDeLiberacion:
                             <td style='border: 1px solid #0056b3; padding: 8px;'><b>{row['Doc.compr.']}</b></td>
                         </tr>
                         """
+
+                        #"Cordial Saludo,<br><br>
+
+#El asistente digital ha realizado exitosamente la ejecución del proceso Cargue de pago a compradores HU00 -Despliegue de ambiente y creación de las tablas en bases de datos."
+
 
                     cuerpo_html = f"""
                     <html>
@@ -343,7 +369,8 @@ class  HU08_EstrategiasDeLiberacion:
                             UPDATE [PagoArriendos].[EstrategiasDeLiberacion]
                             SET EstadoNotificacion = 'EnviadoL', 
                                 FechaActualizacion = '{fecha_hoy_str}',
-                                ContadorEnvio = ContadorEnvio + 1
+                                ContadorEnvio = ContadorEnvio + 1,
+                                CorreoArrendatarios = CorreoArrendatarios + 1
                             WHERE [Doc.compr.] IN ({ids_para_sql_l})
                         """)
                         conn.execute(query)
@@ -402,6 +429,7 @@ class  HU08_EstrategiasDeLiberacion:
                                 UPDATE [PagoArriendos].[EstrategiasDeLiberacion]
                                 SET EstadoNotificacion = 'Escalado',
                                     FechaActualizacion = '{fecha_hoy_str}'
+                                    
                                 WHERE [Doc.compr.] IN ({ids_sql})
                             """))
                             conn.commit()
