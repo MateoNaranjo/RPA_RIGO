@@ -88,7 +88,7 @@ class  HU08_EstrategiasDeLiberacion:
                         Target.[Estr.] = Source.[Estr.],
                         Target.[EstadoNotificacion] = 'Pendiente', 
                         Target.[FechaActualizacion] = GETDATE(),
-                        Target.[ContadorEnvio] = 0
+                        Target.[ContadorEnvio] = 0  -- Reset de internos, pero NO tocamos CorreoArrendatarios
                 -- SI NO EXISTE: Lo insertamos como nuevo
                 WHEN NOT MATCHED THEN
                     INSERT (
@@ -156,10 +156,7 @@ class  HU08_EstrategiasDeLiberacion:
         #df_liberadas = df_liberadas[df_liberadas['ContadorEnvio'] == 0].copy()
         # Filtro para Oc que llevan mas de 3 notificaciones 
         
-
-
-
-             
+           
 
 
         # === 2. CRUCE PARA CASO 3 (LIBERADAS) ===
@@ -448,23 +445,21 @@ class  HU08_EstrategiasDeLiberacion:
                         nombreTarea=f"Notificacion_Liberadas_{acreedor}"
                     )
 
-                    # 4. ACTUALIZACIÓN EN BASE DE DATOS (Estado EnviadoL)
+                    # 4. ACTUALIZACIÓN EN BASE DE DATOS (Estado CorreoArrendador = 1 )
                     lista_ids_l = grupo['Doc.compr.'].astype(str).tolist()
                     ids_para_sql_l = ", ".join([f"'{id}'" for id in lista_ids_l])
 
                     with engine.connect() as conn:
                         query = text(f"""
                             UPDATE [PagoArriendos].[EstrategiasDeLiberacion]
-                            SET EstadoNotificacion = 'EnviadoL', 
-                                FechaActualizacion = '{fecha_hoy_str}',
-                                ContadorEnvio = ContadorEnvio + 1,
-                                CorreoArrendatarios = CorreoArrendatarios + 1
+                            SET CorreoArrendatarios = 1, -- Marcamos que ya se cumplió esta tarea única
+                                FechaActualizacion = '{fecha_hoy_str}'
                             WHERE [Doc.compr.] IN ({ids_para_sql_l})
                         """)
                         conn.execute(query)
                         conn.commit()
                     if ruta_l and os.path.exists(ruta_l): os.remove(ruta_l) # --- LIMPIAR ARCHIVO ---
-                    logger.info(f" SQL: Se marcaron {len(lista_ids_l)} - {lista_ids_l}registros del arrendador {acreedor} como 'EnviadoL'.")
+                    logger.info(f" SQL: Se marcaron {len(lista_ids_l)} - {lista_ids_l}registros del arrendador {acreedor} como CorreoArrendador = 1 ")
 
                 except Exception as e:
                     if ruta_l and os.path.exists(ruta_l): os.remove(ruta_l) # --- LIMPIAR ARCHIVO ---
