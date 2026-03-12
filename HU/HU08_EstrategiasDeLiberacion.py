@@ -30,11 +30,7 @@ class  HU08_EstrategiasDeLiberacion:
             in_config('SapIdioma'),
             in_config('SapRutaLogon'),
             in_config('SapSistema')
-            
         )
-    
-    
-
 
     def ejecutar(self):
         """
@@ -49,14 +45,12 @@ class  HU08_EstrategiasDeLiberacion:
         CONFIG_ADJUNTOS = {
             "BLOQUEADAS": True,   # Caso 1: Status 'B'
             "PENDIENTES": True,   # Caso 2: Status 'P'
-            "LIBERADAS":  False,  # Caso 3: Status 'L' (Arrendadores)
+            "LIBERADAS":  False,  # Caso 3: Status 'L' or 'P' (Arrendadores)
             "ATRASADAS":  True,   # Caso 4: Más de 3 intentos
-            "SIN_CORREO": True    # Reporte de correos faltantes
+            "SIN_CORREO": True    # Reporte de correos faltantes en archivo parametros ParametrosRIGO.xlsx
         }
         #descargadataestliberacion (session = self.sap.iniciar_sesion_sap()) # Descarga de SAP la data de la transaccion "ZMM_68"
         EnviarNotificacionCorreo(codigoCorreo=1,nombreTarea="Probando db")  #Probando metodos de envio de correo
-
-        #TODO: Validar la exixtencia de correos en la tabla 
 
         rutaGuardar = fr"{in_config('PathTemp')}\HU08"
         ahora = datetime.datetime.now() # Obtenemos la fecha y hora actual
@@ -71,8 +65,7 @@ class  HU08_EstrategiasDeLiberacion:
         df.to_excel(os.path.join(rutaGuardar, f"EstdeliberacionEjemplosRIGO-FORMATEADA.xlsx"), index=False)
                
          
-        #df.to_sql("EstrategiasDeLiberacion", engine, schema="PagoArriendos", if_exists='replace', index=False)
-    
+        #df.to_sql("EstrategiasDeLiberacion", engine, schema="PagoArriendos", if_exists='replace', index=False) # para actualizad datos en bd por si se borra la tabla 
         df.to_sql("Temp_Estrategias", con=engine, if_exists='replace', index=False)
 
         #  Ejecutar el MERGE en SQL
@@ -129,32 +122,64 @@ class  HU08_EstrategiasDeLiberacion:
             conn.execute(query_update, {"valor": valor_tiempo})
             conn.commit()
             logger.info(f"Reset de estados ejecutado usando intervalo: {valor_tiempo} {intervalo_sql}")
-
-        
-        # with engine.connect() as conn:
-        #     conn.execute(text("""
-        #         UPDATE [PagoArriendos].[EstrategiasDeLiberacion]
-        #         SET EstadoNotificacion = 'Pendiente'
-        #         WHERE [Status Lib] <> 'L' 
-        #         AND [FechaActualizacion] <= DATEADD(day, -2, GETDATE())
-        #         AND EstadoNotificacion LIKE 'Enviado%'
-        #     """))
-        #     conn.commit()
+     
               
        
         df = pd.read_sql_table("EstrategiasDeLiberacion", engine, schema="PagoArriendos")
-
-        #df = df[df['ContadorEnvio'] == 0].copy()
-        
-        df = df[df['EstadoNotificacion'] == 'Pendiente'].copy()
+       
+        df = df[df['EstadoNotificacion'] == 'Pendiente'].copy() # pruebas con los filtros de abajo, si 
 
         # === 1. PREPARACIÓN DE GRUPOS ===
         df_bloqueadas = df[(df['Status Lib'] == 'B') & (df['EstadoNotificacion'] == 'Pendiente')].copy()# Grupo de Bloqueadas (B) - Se envían todas juntas a un correo fijo
         df_pendientes = df[(df['Status Lib'] == 'P') & (df['EstadoNotificacion'] == 'Pendiente')].copy()# Filtro para Pendientes (P) Se envian segun estrategia de liberacion 
         df_liberadas = df[(df['Status Lib'] != 'B') & (df['CorreoArrendatarios'] == 0 )].copy()# Diferentes de B, que seran enciaviadas a Arrendatarios 
         df_atrasadas = df[df['ContadorEnvio'] > 3 ].copy() # mas de 3 envios por estado B o P 
-        #df_liberadas = df_liberadas[df_liberadas['ContadorEnvio'] == 0].copy()
-        # Filtro para Oc que llevan mas de 3 notificaciones 
+   
+
+        """
+            # 1. Traer todos los pendientes (incluyendo los que están en B para validar el grupo)
+            query_todo = "SELECT * FROM [PagoArriendos].[EstrategiasDeLiberacion] WHERE CorreoArrendatarios = 0"
+            df_liberadas = pd.read_sql(query_todo, engine)
+
+            # 2. Agrupar por Acreedor (NIT)
+            for nit, grupo in df_liberadas.groupby('Acreedor'):
+                
+                # REGLA: No enviar si alguna OC del mismo NIT sigue en estado 'B'
+                if (grupo['Status Lib'] == 'B').any():
+                    print(f"NIT {nit} tiene OCs pendientes de liberación (B). Se salta el envío al Arrendatario.")
+                    continue # Salta al siguiente NIT
+                
+                # REGLA: Solo enviar si el estado es P o L para todas o algunas, 
+                # pero ya validamos que no hay ninguna en 'B'.
+                
+                # Extraer datos para el correo paramétrico
+                lista_ocs = grupo['Doc.compr.'].tolist()
+                nombre_arrendatario = grupo['Nombre 1'].iloc[0]
+                email_destino = buscar_correo_en_maestra(nit) # Tu función de búsqueda
+                
+                if email_destino:
+                    # 3. LLAMADA A FUNCIÓN PARAMÉTRICA
+                    # Pasamos el tipo de plantilla según el estado predominante o general
+                    exito = enviar_correo_parametrizado(
+                        destinatario=email_destino,
+                        nombre=nombre_arrendatario,
+                        ocs=lista_ocs,
+                        template_type='NotificacionArrendatario' 
+                    )
+                    
+                    if exito:
+                        # 4. UPDATE MASIVO PARA ESE NIT
+                        ids_enviados = ",".join([f"'{id}'" for id in lista_ocs])
+                        with engine.connect() as conn:
+                            conn.execute(text(f"""
+                               # UPDATE [PagoArriendos].[EstrategiasDeLiberacion] 
+                               # SET CorreoArrendatarios = 1,
+                               #     FechaActualizacion = GETDATE()
+                               # WHERE [Doc.compr.] IN ({ids_enviados})
+                           # """))
+                            #conn.commit()
+        
+        
         
            
 
