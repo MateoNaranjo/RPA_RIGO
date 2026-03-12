@@ -33,6 +33,7 @@ class  HU08_EstrategiasDeLiberacion:
             
         )
     
+    
 
 
     def ejecutar(self):
@@ -43,7 +44,16 @@ class  HU08_EstrategiasDeLiberacion:
         """
         db= Database()
         engine = db.get_engine()
-        #descargadataestliberacion (session = self.sap.iniciar_sesion_sap())
+
+        # --- CONSOLA DE MANDO: ACTIVAR/DESACTIVAR EXCEL POR CASO ---
+        CONFIG_ADJUNTOS = {
+            "BLOQUEADAS": True,   # Caso 1: Status 'B'
+            "PENDIENTES": True,   # Caso 2: Status 'P'
+            "LIBERADAS":  False,  # Caso 3: Status 'L' (Arrendadores)
+            "ATRASADAS":  True,   # Caso 4: Más de 3 intentos
+            "SIN_CORREO": True    # Reporte de correos faltantes
+        }
+        #descargadataestliberacion (session = self.sap.iniciar_sesion_sap()) # Descarga de SAP la data de la transaccion "ZMM_68"
         EnviarNotificacionCorreo(codigoCorreo=1,nombreTarea="Probando db")  #Probando metodos de envio de correo
 
         #TODO: Validar la exixtencia de correos en la tabla 
@@ -53,14 +63,15 @@ class  HU08_EstrategiasDeLiberacion:
         fecha_formateada = ahora.strftime("%d.%m.%Y") # Ejemplo de salida: 01.01.2026
 
         #df = LeerTXT_SAP_Universal(os.path.join(rutaGuardar, f"EstrategiasDeLiberacion{fecha_formateada}.txt"))
-        #df = LeerTXT_SAP_Universal(os.path.join(rutaGuardar, f"EstrategiasDeLiberacion1.txt"))
-        df = pd.read_excel(os.path.join(rutaGuardar, f"EstdeliberacionEjemplosRIGO.xlsx"))
+        df = pd.read_excel(os.path.join(rutaGuardar, f"EstdeliberacionEjemplosRIGO.xlsx")) # Para pruebas cargamos una data de ejemplos 
         
         df = fomatodf(df)
         logger.debug("imprimir df para pruebas: ")
         impimmirdf(df)
+        df.to_excel(os.path.join(rutaGuardar, f"EstdeliberacionEjemplosRIGO-FORMATEADA.xlsx"), index=False)
+               
          
-        df.to_sql("EstrategiasDeLiberacion", engine, schema="PagoArriendos", if_exists='replace', index=False)
+        #df.to_sql("EstrategiasDeLiberacion", engine, schema="PagoArriendos", if_exists='replace', index=False)
     
         df.to_sql("Temp_Estrategias", con=engine, if_exists='replace', index=False)
 
@@ -138,78 +149,135 @@ class  HU08_EstrategiasDeLiberacion:
         df = df[df['EstadoNotificacion'] == 'Pendiente'].copy()
 
         # === 1. PREPARACIÓN DE GRUPOS ===
-        # Grupo de Bloqueadas (B) - Se envían todas juntas a un correo fijo
-        df_bloqueadas = df[(df['Status Lib'] == 'B') & (df['EstadoNotificacion'] == 'Pendiente')].copy()
-        # Filtro para Pendientes (P) que están Pendientes de notificación
-        df_pendientes = df[(df['Status Lib'] == 'P') & (df['EstadoNotificacion'] == 'Pendiente')].copy()
-        # Filtro para Liberadas (L) que están Pendientes de notificación
-        df_liberadas = df[(df['Status Lib'] != 'B') & (df['CorreoArrendatarios'] == 0 )].copy()
+        df_bloqueadas = df[(df['Status Lib'] == 'B') & (df['EstadoNotificacion'] == 'Pendiente')].copy()# Grupo de Bloqueadas (B) - Se envían todas juntas a un correo fijo
+        df_pendientes = df[(df['Status Lib'] == 'P') & (df['EstadoNotificacion'] == 'Pendiente')].copy()# Filtro para Pendientes (P) Se envian segun estrategia de liberacion 
+        df_liberadas = df[(df['Status Lib'] != 'B') & (df['CorreoArrendatarios'] == 0 )].copy()# Diferentes de B, que seran enciaviadas a Arrendatarios 
+        df_atrasadas = df[df['ContadorEnvio'] > 3 ].copy() # mas de 3 envios por estado B o P 
         #df_liberadas = df_liberadas[df_liberadas['ContadorEnvio'] == 0].copy()
         # Filtro para Oc que llevan mas de 3 notificaciones 
-        df_atrasadas = df[df['ContadorEnvio'] > 3 ].copy()
+        
 
-        logger.debug("df_bloqueadas")
-        impimmirdf(df_bloqueadas)
-        logger.debug("df_pendientes")
-        impimmirdf(df_pendientes)
-        logger.debug("df_liberadas")
-        impimmirdf(df_liberadas)
-        logger.debug("df_atrasadas")
-        impimmirdf(df_atrasadas)
+
 
              
 
 
         # === 2. CRUCE PARA CASO 3 (LIBERADAS) ===
-        # Leemos el excel y aseguramos que NIT sea string para un cruce limpio
-
+        # Leemos la ta excel y aseguramos que NIT sea string para un cruce limpio
         consulta = "SELECT * FROM [PagoArriendos].[Arrendatarios]"
-        df_proveedores = pd.read_sql_query(consulta, engine)
-        #df_proveedores = pd.read_sql_table("Arrendatarios", engine, schema="PagoArriendos")
-        df_proveedores['NIT'] = df_proveedores['NIT'].astype(str).str.strip()
+        df_Arrendatarios = pd.read_sql_query(consulta, engine) #df_Arrendatarios = pd.read_sql_table("Arrendatarios", engine, schema="PagoArriendos")
+        df_Arrendatarios['NIT'] = df_Arrendatarios['NIT'].astype(str).str.strip()
         df_liberadas['Acreedor'] = df_liberadas['Acreedor'].astype(str).str.strip()
        
-        #  Si tienes una tabla de proveedores (df_proveedores) con columnas ['NIT', 'Correo', 'Inmueble', 'Contrato']
+        #  Tabla Arrendatarios (df_Arrendatarios) con columnas ['NIT', 'Correo', 'Inmueble', 'Contrato']
         # Hacemos un merge para traer la información necesaria
         df_final_L = pd.merge(
             df_liberadas, 
-            df_proveedores, 
+            df_Arrendatarios, 
             left_on='Acreedor', 
             right_on='NIT', 
             how='left'
         )
 
-        logger.debug("df_final_L")
-        impimmirdf(df_final_L)
+        df_SinCorreo = pd.merge(
+            df, 
+            df_Arrendatarios, 
+            left_on='Acreedor', 
+            right_on='NIT', 
+            how='left'
+        )
+       
 
-        df_SinCorreo = df_final_L[(df_final_L['Correo Proveedor'].notna()) & (df_final_L['Correo Proveedor'].astype(str).str.strip() != '')].copy()
-        logger.debug("df_SinCorreo")
-        impimmirdf(df_SinCorreo)
+        # Filtramos los que no tienen correo
+        df_SinCorreo = df_SinCorreo[(df_SinCorreo['Correo Proveedor'].isna()) | (df_SinCorreo['Correo Proveedor'].astype(str).str.strip() == '')].copy()
 
+        # IMPORTANTE: Eliminamos duplicados por Creador y Acreedor para que Eri y Fernando 
+        # reciban sus respectivos registros aunque sea el mismo proveedor.
+        df_SinCorreo = df_SinCorreo.drop_duplicates(subset=["Acreedor", "Creado"], keep="first")
 
-        
+        # --- CASO 0: envio de informe de falta de informacion "correos", de los arrendatarios en el ecxel ParametrosRIGO.xlsx, Hoja : Arrendatarios, 
+        if not df_SinCorreo.empty:
+            logger.info("Generando reportes Excel para registros sin correo...")
+            
+            mapeo_administradores = {
+                'ERIIGUZV': 'steven.navarro@netapplications.com.co',
+                'FERNCAMS': 'steven.navarro@netapplications.com.co'
+            }
+
+            for creador, grupo in df_SinCorreo.groupby("Creado"):
+                destinatario_admin = mapeo_administradores.get(creador)
+                
+                if destinatario_admin:
+                    ruta_SinCorreo = None
+                    adjuntos = []
+                    # Lógica de adjunto independiente
+                    if CONFIG_ADJUNTOS["SIN_CORREO"]:
+                        fecha_str = datetime.datetime.now().strftime('%Y%m%d_%H%M')
+                        nombre_archivo = f"Correos_Faltantes_{creador}_{fecha_str}.xlsx"
+                        ruta_SinCorreo = os.path.join(in_config("PathTemp"), nombre_archivo)
+                        grupo.to_excel(ruta_SinCorreo, index=False)
+                        adjuntos = [ruta_SinCorreo]
+                    
+                asunto_admin = f"ACCION REQUERIDA: Reporte de Correos Faltantes - {creador}"
+                cuerpo_admin = f"""
+                <html><body>
+                    <p>Hola <b>{creador}</b>,</p>
+                    <p>Se adjunta el listado de proveedores que no tienen un correo registrado. 
+                    Es necesario actualizarlos para que el bot pueda notificarles.</p>
+                    <p>Registros afectados: <b>{len(grupo)}</b></p>
+                </body></html>
+                """
+                
+                try:
+                    # --- PASO 2: ENVIAR CON ADJUNTO ---
+                    EnviarCorreoPersonalizado(
+                        destinatario=destinatario_admin,
+                        asunto=asunto_admin,
+                        cuerpo=cuerpo_admin,
+                        adjuntos=adjuntos, # Pasamos la ruta como lista
+                        nombreTarea=f"Reporte_SinCorreo_{creador}"
+                    )
+                    
+                    # --- PASO 3: LIMPIAR ARCHIVO ---
+                    if ruta_SinCorreo and os.path.exists(ruta_SinCorreo): os.remove(ruta_SinCorreo)
+
+                    # (Tu código de UPDATE SQL aquí se mantiene igual...)
+                    logger.info(f"Excel enviado y borrado para {creador}")
+
+                except Exception as e:
+                    if ruta_SinCorreo and os.path.exists(ruta_SinCorreo): os.remove(ruta_SinCorreo)
+                    logger.error(f"Error en reporte Excel para {creador}: {e}")
+
 
 
         # --- CASO 1: STATUS 'B' (Correo Único) ---
         if not df_bloqueadas.empty:
-            # 1. Preparación de datos para el correo
+            # Preparación de datos para el correo
             destinatario_b = "Steven.navarro@netapplications.com.co" 
             fecha_hoy_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             asunto_b = f"Reporte OC Bloqueadas (Status B) - {fecha_hoy_str}"
             cuerpo_b = f"<h3>Listado de OCs Bloqueadas:</h3> {df_bloqueadas.to_html(index=False)}"
+            ruta_b = None
+            adjuntos_b = []
+
+            if CONFIG_ADJUNTOS["BLOQUEADAS"]:
+                ruta_b = os.path.join(in_config("PathTemp"), "OC_Bloqueadas_Reporte.xlsx")
+                df_bloqueadas.to_excel(ruta_b, index=False)
+                adjuntos_b = [ruta_b]
 
             try:
-                # 2. Enviamos el correo
+                # Enviamos el correo
                 EnviarCorreoPersonalizado(
                     destinatario=destinatario_b,
                     asunto=asunto_b,
                     cuerpo=cuerpo_b,
+                    adjuntos=adjuntos_b,
                     nombreTarea="Notificacion_Bloqueadas"
                 )
                 logger.info("Correo de Bloqueadas enviado con exito.")
 
-                # 3. ACTUALIZACIÓN EN BASE DE DATOS
-                # Extraemos los Documentos de Compras (IDs únicos) para marcarlos como 'Enviado'
+                # ACTUALIZACIÓN EN BASE DE DATOS
+                # Extraemos los Documentos de Compras (IDs únicos) para marcarlos como 'EnviadoB'
                 # Ajusta 'Documento compras' al nombre real de tu columna de ID
                 lista_ids = df_bloqueadas['Doc.compr.'].astype(str).tolist()
                 ids_para_sql = ", ".join([f"'{id}'" for id in lista_ids])
@@ -224,10 +292,11 @@ class  HU08_EstrategiasDeLiberacion:
                     """)
                     conn.execute(query)
                     conn.commit()
-                    
+                if ruta_b and os.path.exists(ruta_b): os.remove(ruta_b) # --- LIMPIAR ARCHIVO ---
                 logger.info(f" Se marcaron {len(lista_ids)} - {lista_ids} registros como 'EnviadoB' en SQL.")
 
             except Exception as e:
+                if ruta_b and os.path.exists(ruta_b): os.remove(ruta_b) # --- LIMPIAR ARCHIVO ---
                 logger.error(f"Error al procesar notificaciones de Bloqueadas: {str(e)}")
 
         # --- CASO 2: STATUS 'P' (Correo según Estrategia) ---
@@ -236,9 +305,18 @@ class  HU08_EstrategiasDeLiberacion:
             fecha_hoy_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             # Agrupamos por Estrategia para enviar un correo por cada una
             for estrategia, grupo in df_pendientes.groupby("Estr."):
+                ruta_p = None
+                adjuntos_p = []
+                if CONFIG_ADJUNTOS["PENDIENTES"]:
+                    ruta_p = os.path.join(in_config("PathTemp"), f"OC_Pendientes_{estrategia}.xlsx")
+                    grupo.to_excel(ruta_p, index=False)
+                    adjuntos_p = [ruta_p]
+
+
                 try:
                     # 1. Configuración del destinatario y contenido
                     # Reemplaza esta línea con tu lógica de búsqueda (ej. desde un diccionario de parámetros)
+                    #TODO: traer de la base de datos los correos, analizar en que momento y forma los convertimos en diccionarios para la variable correos = {}
                     correos = {
                         'SX': "Steven.navarro@netapplications.com.co",
                         'JG': "Steven.navarro@netapplications.com.co",
@@ -257,6 +335,7 @@ class  HU08_EstrategiasDeLiberacion:
                         destinatario=correo_estrategia,
                         asunto=asunto_p,
                         cuerpo=cuerpo_p,
+                        adjuntos=adjuntos_p,
                         nombreTarea=f"Notificacion_Pendientes_{estrategia}"
                     )
                     logger.info(f"Correo enviado con exito para la estrategia: {estrategia}")
@@ -275,14 +354,15 @@ class  HU08_EstrategiasDeLiberacion:
                         """)
                         conn.execute(query)
                         conn.commit()
-                    
+                    if ruta_p and os.path.exists(ruta_p): os.remove(ruta_p) # --- LIMPIAR ARCHIVO ---
                     logger.info(f" SQL: Se marcaron {len(lista_ids_p)} - {lista_ids_p} registros de la estrategia {estrategia} como 'EnviadoP'.")
 
                 except Exception as e:
+                    if ruta_p and os.path.exists(ruta_p): os.remove(ruta_p) # --- LIMPIAR ARCHIVO ---
                     logger.error(f" Error al procesar la estrategia {estrategia}: {str(e)}")
 
 
-        # --- CASO 3: STATUS 'L' (Liberadas / Notificación a Arrendadores) ---
+        # --- CASO 3: STATUS != B (Liberadas o Pemdientes "JG,OP,RH,SX" / Notificación a Arrendadores) ---
         if not df_final_L.empty:
             # Generamos la fecha con el formato estándar del Bot
             fecha_hoy_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -292,6 +372,14 @@ class  HU08_EstrategiasDeLiberacion:
 
             # Agrupamos por Acreedor para no saturar al arrendador con múltiples correos
             for acreedor, grupo in df_final_L.groupby("Acreedor"):
+                ruta_l = None
+                adjuntos_l = []
+
+                if CONFIG_ADJUNTOS["LIBERADAS"]:
+                    ruta_l = os.path.join(in_config("PathTemp"), f"Detalle_OC_{acreedor}.xlsx")
+                    # Solo columnas que el cliente debe ver
+                    grupo[['Inmueble', 'No de contrato', 'Acreedor', 'Doc.compr.']].to_excel(ruta_l, index=False)
+                    adjuntos_l = [ruta_l]
 
                 try:
                     # 1. Extracción de datos del Arrendador
@@ -319,8 +407,7 @@ class  HU08_EstrategiasDeLiberacion:
                         """
 
                         #"Cordial Saludo,<br><br>
-
-#El asistente digital ha realizado exitosamente la ejecución del proceso Cargue de pago a compradores HU00 -Despliegue de ambiente y creación de las tablas en bases de datos."
+                        #El asistente digital ha realizado exitosamente la ejecución del proceso Cargue de pago a compradores HU00 -Despliegue de ambiente y creación de las tablas en bases de datos."
 
 
                     cuerpo_html = f"""
@@ -357,6 +444,7 @@ class  HU08_EstrategiasDeLiberacion:
                         destinatario=correo_proveedor,
                         asunto=asunto,
                         cuerpo=cuerpo_html,
+                        adjuntos=adjuntos_l,
                         nombreTarea=f"Notificacion_Liberadas_{acreedor}"
                     )
 
@@ -375,10 +463,11 @@ class  HU08_EstrategiasDeLiberacion:
                         """)
                         conn.execute(query)
                         conn.commit()
-                    
+                    if ruta_l and os.path.exists(ruta_l): os.remove(ruta_l) # --- LIMPIAR ARCHIVO ---
                     logger.info(f" SQL: Se marcaron {len(lista_ids_l)} - {lista_ids_l}registros del arrendador {acreedor} como 'EnviadoL'.")
 
                 except Exception as e:
+                    if ruta_l and os.path.exists(ruta_l): os.remove(ruta_l) # --- LIMPIAR ARCHIVO ---
                     logger.exception(f" Error al notificar al arrendador {acreedor}: {str(e)}")
 
         # --- CASO 4: Atrasadas por liberacion STATUS =!'L' (no Liberadas / Notificación a Administración Inmobiliaria ) ---  eri.guzman@colsubsidio.com, FernandoEjemplo@colsubsidio.com
@@ -398,7 +487,14 @@ class  HU08_EstrategiasDeLiberacion:
                 
                 if destinatario_admin:
                     fecha_hoy_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    asunto_admin = f"ALERTA: OCs con Liberación Crítica - Creador: {creador}"
+                    asunto_admin = f"ALERTA: OCs con Liberación Crítica - Creador: {creador}"                    
+                    ruta_a = None
+                    adjuntos_a = []
+
+                    if CONFIG_ADJUNTOS["ATRASADAS"]:
+                        ruta_a = os.path.join(in_config("PathTemp"), f"OC_CRITICAS_{creador}.xlsx")
+                        grupo.to_excel(ruta_a, index=False)
+                        adjuntos_a = [ruta_a]
                     
                     # Construcción del cuerpo con una tabla HTML de las atrasadas
                     cuerpo_admin = f"""
@@ -417,6 +513,7 @@ class  HU08_EstrategiasDeLiberacion:
                             destinatario=destinatario_admin,
                             asunto=asunto_admin,
                             cuerpo=cuerpo_admin,
+                            adjuntos=adjuntos_a,
                             nombreTarea=f"Escalamiento_Atrasadas_{creador}"
                         )
                         
@@ -433,11 +530,24 @@ class  HU08_EstrategiasDeLiberacion:
                                 WHERE [Doc.compr.] IN ({ids_sql})
                             """))
                             conn.commit()
+
+                        if ruta_a and os.path.exists(ruta_a): os.remove(ruta_a) # --- LIMPIAR ARCHIVO ---
                         logger.info(f"Escalamiento enviado a {creador} ({destinatario_admin})")
                         
                     except Exception as e:
+                        if ruta_a and os.path.exists(ruta_a): os.remove(ruta_a) # --- LIMPIAR ARCHIVO ---
                         logger.error(f"Error en escalamiento para {creador}: {e}")
-                
+        
+
+
+        # logger.debug("df_bloqueadas")
+        # impimmirdf(df_bloqueadas)
+        # logger.debug("df_pendientes")
+        # impimmirdf(df_pendientes)
+        # logger.debug("df_liberadas")
+        # impimmirdf(df_liberadas)
+        # logger.debug("df_atrasadas")
+        # impimmirdf(df_atrasadas)
 
     
    

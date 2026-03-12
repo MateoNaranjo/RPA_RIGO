@@ -946,6 +946,9 @@ def fomatodf(df: pd.DataFrame):
         # Convertir 'Precio neto' a numérico, manejando comas y puntos
         df['Precio neto'] = pd.to_numeric(df['Precio neto'].astype(str).str.replace('.', '', regex=False).str.replace(',', '.', regex=False),errors='coerce').fillna(0)
 
+        # campo Acreedor se convierte a texto, es donde se encuentre el nit 
+        df['Acreedor'] = df['Acreedor'].astype(str).str.strip()
+
         # Agregar la fecha y hora actual, Usamos format para que SQL lo reconozca como DATETIME fácilmente
         df['FechaActualizacion'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         # Agregar el estado de notificación inicial, Lo marcamos como 'Pendiente' para que el módulo de correo sepa qué procesar
